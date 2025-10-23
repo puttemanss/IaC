@@ -4,623 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EpicData - Azure IaC Generator with CAF</title>
+    <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
-        :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-tertiary: #f1f5f9;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --text-tertiary: #64748b;
-            --border-color: #e2e8f0;
-            --accent-primary: #3b82f6;
-            --accent-secondary: #60a5fa;
-            --accent-hover: #2563eb;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme="dark"] {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-tertiary: #94a3b8;
-            --border-color: #334155;
-            --accent-primary: #3b82f6;
-            --accent-secondary: #60a5fa;
-            --accent-hover: #2563eb;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            background: var(--bg-primary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-sm);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 24px;
-            color: white;
-        }
-
-        .brand-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .brand-tagline {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .theme-toggle {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            transition: all 0.3s;
-        }
-
-        .theme-toggle:hover {
-            background: var(--bg-tertiary);
-            transform: scale(1.05);
-        }
-
-        .progress-container {
-            background: var(--bg-primary);
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: var(--shadow-md);
-        }
-
-        .progress-steps {
-            display: flex;
-            justify-content: space-between;
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .progress-steps::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--border-color);
-            z-index: 0;
-        }
-
-        .progress-line {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent-primary), var(--success));
-            z-index: 1;
-            transition: width 0.4s ease;
-        }
-
-        .progress-step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 2;
-            cursor: pointer;
-            flex: 1;
-        }
-
-        .progress-step-circle {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: var(--bg-primary);
-            border: 3px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: var(--text-tertiary);
-            margin-bottom: 8px;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .progress-step.active .progress-step-circle {
-            border-color: var(--accent-primary);
-            background: var(--accent-primary);
-            color: white;
-            transform: scale(1.1);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-        }
-
-        .progress-step.completed .progress-step-circle {
-            border-color: var(--success);
-            background: var(--success);
-            color: white;
-        }
-
-        .progress-step-label {
-            font-size: 11px;
-            color: var(--text-secondary);
-            text-align: center;
-            max-width: 90px;
-            font-weight: 500;
-        }
-
-        .progress-step.active .progress-step-label {
-            color: var(--accent-primary);
-            font-weight: 600;
-        }
-
-        .content {
-            display: grid;
-            grid-template-columns: 450px 1fr;
-            gap: 20px;
-            height: calc(100vh - 200px);
-        }
-
-        .form-section {
-            background: var(--bg-primary);
-            padding: 24px;
-            border-radius: 12px;
-            overflow-y: auto;
-            box-shadow: var(--shadow-md);
-        }
-
-        .output-section {
-            background: var(--bg-primary);
-            padding: 24px;
-            border-radius: 12px;
-            overflow-y: auto;
-            box-shadow: var(--shadow-md);
-        }
-
-        .step {
-            display: none;
-        }
-
-        .step.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .step-title {
-            font-size: 24px;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-
-        .step-description {
-            color: var(--text-secondary);
-            margin-bottom: 24px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 13px;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 14px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .required {
-            color: var(--error);
-            margin-left: 2px;
-        }
-
-        .help-text {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            margin-top: 4px;
-        }
-
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .radio-option {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 14px;
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .radio-option:hover {
-            border-color: var(--accent-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .radio-option input[type="radio"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            margin-top: 2px;
-            accent-color: var(--accent-primary);
-        }
-
-        .radio-option-content {
-            flex: 1;
-        }
-
-        .radio-option-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            font-size: 14px;
-        }
-
-        .radio-option-description {
-            font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px;
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 12px;
-        }
-
-        .checkbox-group:hover {
-            border-color: var(--accent-primary);
-            background: var(--bg-tertiary);
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: var(--accent-primary);
-        }
-
-        .checkbox-group label {
-            cursor: pointer;
-            margin: 0 !important;
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 12px;
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: var(--accent-primary);
-            color: white;
-            flex: 1;
-        }
-
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-secondary:hover {
-            background: var(--border-color);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-            flex: 1;
-        }
-
-        .btn-success:hover {
-            background: #059669;
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .info-box {
-            padding: 16px;
-            border-radius: 6px;
-            border-left: 3px solid;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .info-box.info {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: var(--accent-primary);
-        }
-
-        .info-box.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border-color: var(--warning);
-        }
-
-        .info-box-title {
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-
-        .output-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .output-title {
-            color: var(--text-primary);
-            font-size: 18px;
-            font-weight: 700;
-        }
-
-        .output-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .file-tabs {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .file-tab {
-            padding: 6px 12px;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-            font-weight: 500;
-        }
-
-        .file-tab.active {
-            background: var(--accent-primary);
-            color: white;
-            border-color: var(--accent-primary);
-        }
-
-        .file-tab:hover:not(.active) {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .copy-btn, .download-btn {
-            padding: 8px 16px;
-            background: var(--accent-primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            font-size: 13px;
-        }
-
-        .copy-btn:hover, .download-btn:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-        }
-
-        .download-btn {
-            background: var(--success);
-        }
-
-        .download-btn:hover {
-            background: #059669;
-        }
-
-        pre {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            padding: 16px;
-            border-radius: 6px;
-            overflow-x: auto;
-            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
-            font-size: 12px;
-            line-height: 1.6;
-            margin: 0;
-            border: 1px solid var(--border-color);
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-tertiary);
-        }
-    </style>
 </head>
 <body>
     <div class="header">
         <div class="logo-section">
             <div class="logo">E</div>
-            <div class="brand">
+            <div>
                 <div class="brand-name">EpicData</div>
-                <div class="brand-tagline">Azure IaC Generator with CAF Foundation</div>
+                <div class="brand-tagline">Azure IaC Generator</div>
             </div>
         </div>
-        <div class="header-actions">
-            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
-        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
     </div>
 
     <div class="container">
         <div class="progress-container">
             <div class="progress-steps">
                 <div class="progress-line" id="progressLine"></div>
+
                 <div class="progress-step active" data-step="0">
-                    <div class="progress-step-circle">0</div>
-                    <div class="progress-step-label">Type</div>
+                    <div class="progress-step-circle">1</div>
+                    <div class="progress-step-label">Deployment Type</div>
                 </div>
                 <div class="progress-step" data-step="1">
-                    <div class="progress-step-circle">1</div>
-                    <div class="progress-step-label">General</div>
+                    <div class="progress-step-circle">2</div>
+                    <div class="progress-step-label">Basic Info</div>
                 </div>
                 <div class="progress-step" data-step="2">
-                    <div class="progress-step-circle">2</div>
-                    <div class="progress-step-label">Resources</div>
+                    <div class="progress-step-circle">3</div>
+                    <div class="progress-step-label">Services</div>
                 </div>
                 <div class="progress-step" data-step="3">
-                    <div class="progress-step-circle">3</div>
+                    <div class="progress-step-circle">4</div>
                     <div class="progress-step-label">Identity</div>
                 </div>
                 <div class="progress-step" data-step="4">
-                    <div class="progress-step-circle">4</div>
+                    <div class="progress-step-circle">5</div>
                     <div class="progress-step-label">Databricks</div>
                 </div>
                 <div class="progress-step" data-step="5">
-                    <div class="progress-step-circle">5</div>
-                    <div class="progress-step-label">Network</div>
+                    <div class="progress-step-circle">6</div>
+                    <div class="progress-step-label">Networking</div>
                 </div>
                 <div class="progress-step" data-step="6">
-                    <div class="progress-step-circle">6</div>
-                    <div class="progress-step-label">Config</div>
+                    <div class="progress-step-circle">7</div>
+                    <div class="progress-step-label">Resources</div>
                 </div>
                 <div class="progress-step" data-step="7">
-                    <div class="progress-step-circle">7</div>
+                    <div class="progress-step-circle">✓</div>
                     <div class="progress-step-label">Review</div>
                 </div>
             </div>
@@ -631,51 +64,32 @@
                 <!-- Step 0: Deployment Type -->
                 <div class="step active" id="step0">
                     <div class="step-title">Choose Deployment Type</div>
-                    <div class="step-description">Select whether you're starting fresh or have existing Azure infrastructure</div>
+                    <div class="step-description">Select the type of deployment that best fits your needs</div>
 
-                    <div class="form-group">
-                        <div class="radio-group">
-                            <div class="radio-option" onclick="selectRadio('deployment_type', 'greenfield')">
-                                <input type="radio" name="deployment_type" id="deployment_greenfield" value="greenfield" checked>
-                                <div class="radio-option-content">
-                                    <div class="radio-option-title">🌱 Greenfield - New Azure Environment</div>
-                                    <div class="radio-option-description">
-                                        <strong>Start from scratch with Azure CAF/WAF foundation</strong><br>
-                                        • Sets up complete Cloud Adoption Framework architecture<br>
-                                        • Management groups, policies, and governance<br>
-                                        • Hub-spoke network topology<br>
-                                        • Centralized logging and monitoring<br>
-                                        • Security baseline with Defender for Cloud<br>
-                                        • Best for: New Azure deployments, enterprise-scale setup
-                                    </div>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="deployment_type" id="deployment_greenfield" value="greenfield" checked>
+                            <div class="radio-option-content">
+                                <div class="radio-option-title">Greenfield - CAF Foundation</div>
+                                <div class="radio-option-description">
+                                    Deploy a complete Cloud Adoption Framework foundation with management groups,
+                                    policies, hub-spoke networking, Azure Firewall, and monitoring. Perfect for
+                                    starting fresh or establishing enterprise governance.
                                 </div>
                             </div>
+                        </label>
 
-                            <div class="radio-option" onclick="selectRadio('deployment_type', 'brownfield')">
-                                <input type="radio" name="deployment_type" id="deployment_brownfield" value="brownfield">
-                                <div class="radio-option-content">
-                                    <div class="radio-option-title">🏗️ Brownfield - Existing Landing Zone</div>
-                                    <div class="radio-option-description">
-                                        <strong>Deploy data platform into existing Azure environment</strong><br>
-                                        • Assumes existing landing zone/CAF setup<br>
-                                        • Uses your existing VNet, policies, and governance<br>
-                                        • Focuses on data platform resources<br>
-                                        • Best for: Existing Azure deployments
-                                    </div>
+                        <label class="radio-option">
+                            <input type="radio" name="deployment_type" id="deployment_brownfield" value="brownfield">
+                            <div class="radio-option-content">
+                                <div class="radio-option-title">Brownfield - Data Platform Only</div>
+                                <div class="radio-option-description">
+                                    Deploy only the data platform resources (Storage, Databricks, Data Factory, etc.)
+                                    into an existing landing zone. Assumes you already have governance, networking,
+                                    and security baseline in place.
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="info-box info">
-                        <div class="info-box-title">📚 What is Azure CAF?</div>
-                        <div>
-                            The Cloud Adoption Framework provides proven guidance and best practices for your Azure journey. 
-                            It includes enterprise-scale landing zones with management groups, policies, networking, security, and operations.
-                            <br><br>
-                            <strong>Learn more:</strong>
-                            <a href="https://learn.microsoft.com/azure/cloud-adoption-framework/" target="_blank" style="color: var(--accent-primary);">Azure CAF Docs</a>
-                        </div>
+                        </label>
                     </div>
 
                     <div class="button-group">
@@ -683,14 +97,15 @@
                     </div>
                 </div>
 
-                <!-- Step 1: General Settings -->
+                <!-- Step 1: Basic Configuration -->
                 <div class="step" id="step1">
-                    <div class="step-title">General Settings</div>
-                    <div class="step-description">Configure your Azure environment and naming conventions</div>
+                    <div class="step-title">Basic Configuration</div>
+                    <div class="step-description">Configure your Azure environment details</div>
 
                     <div class="form-group">
                         <label>Tenant ID <span class="required">*</span></label>
                         <input type="text" id="tenant_id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                        <div class="help-text">Your Azure AD tenant ID</div>
                     </div>
 
                     <div class="form-group">
@@ -699,29 +114,28 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Owner <span class="required">*</span></label>
+                        <label>Owner/Team Name</label>
                         <input type="text" id="owner" placeholder="Your Name">
-                        <div class="help-text">Used for resource tagging</div>
                     </div>
 
                     <div class="form-group">
-                        <label>Company/Organization Name <span class="required">*</span></label>
+                        <label>Company Abbreviation (max 8 chars) <span class="required">*</span></label>
                         <input type="text" id="company_abbreviation" placeholder="contoso" maxlength="8">
-                        <div class="help-text">Max 8 characters - lowercase alphanumeric only</div>
+                        <div class="help-text">Used in resource naming (e.g., "st" + company + environment)</div>
                     </div>
 
                     <div class="form-group">
-                        <label>Project Name <span class="required">*</span></label>
+                        <label>Project/Workload Name (max 20 chars) <span class="required">*</span></label>
                         <input type="text" id="project_name" placeholder="dataplatform" maxlength="20">
-                        <div class="help-text">Max 20 characters - lowercase alphanumeric only</div>
                     </div>
 
                     <div class="form-group">
                         <label>Environment <span class="required">*</span></label>
                         <select id="environment">
                             <option value="dev">Development</option>
-                            <option value="test">Test</option>
-                            <option value="prod">Production</option>
+                            <option value="tst">Test</option>
+                            <option value="acc">Acceptance</option>
+                            <option value="prd">Production</option>
                         </select>
                     </div>
 
@@ -741,49 +155,49 @@
                     </div>
                 </div>
 
-                <!-- Step 2: Resource Selection (Only for Brownfield) -->
+                <!-- Step 2: Resource Selection -->
                 <div class="step" id="step2">
-                    <div class="step-title">Select Data Platform Resources</div>
-                    <div class="step-description">Choose which Azure data resources to deploy</div>
+                    <div class="step-title">Select Azure Services</div>
+                    <div class="step-description">Choose which data platform services to deploy</div>
 
                     <div id="brownfieldResources">
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_storage_account')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_storage_account">
-                            <label>Storage Account (Data Lake Gen2)</label>
+                            <label for="include_storage_account">Storage Account (Data Lake Gen2)</label>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_databricks')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_databricks">
-                            <label>Azure Databricks</label>
+                            <label for="include_databricks">Azure Databricks</label>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_data_factory')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_data_factory">
-                            <label>Azure Data Factory</label>
+                            <label for="include_data_factory">Azure Data Factory</label>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_eventhub')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_eventhub">
-                            <label>Azure Event Hub</label>
+                            <label for="include_eventhub">Azure Event Hub</label>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_sql_database')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_sql_database">
-                            <label>Azure SQL Database</label>
+                            <label for="include_sql_database">Azure SQL Database</label>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('include_azure_function')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="include_azure_function">
-                            <label>Azure Function App</label>
+                            <label for="include_azure_function">Azure Functions</label>
                         </div>
                     </div>
 
                     <div id="greenfieldNote" style="display: none;">
                         <div class="info-box info">
-                            <div class="info-box-title">🏗️ Greenfield Foundation Setup</div>
+                            <div class="info-box-title">CAF Foundation Deployment</div>
                             <div>
-                                Your Azure Cloud Adoption Framework foundation will be configured automatically with best practices.
-                                This includes management groups, policies, networking hub, and security baseline.
+                                Greenfield deployment includes all foundational resources by default.
+                                You can customize additional data platform services in later steps.
                             </div>
                         </div>
                     </div>
@@ -797,37 +211,29 @@
                 <!-- Step 3: Identity Configuration -->
                 <div class="step" id="step3">
                     <div class="step-title">Identity Configuration</div>
-                    <div class="step-description">Choose authentication method for Azure services</div>
+                    <div class="step-description">Configure managed identity for your resources</div>
 
-                    <div class="form-group">
-                        <label>Identity Type <span class="required">*</span></label>
-                        <div class="radio-group">
-                            <div class="radio-option" onclick="selectRadio('identity_type', 'user_assigned')">
-                                <input type="radio" name="identity_type" id="identity_user_assigned" value="user_assigned" checked>
-                                <div class="radio-option-content">
-                                    <div class="radio-option-title">User Assigned Managed Identity</div>
-                                    <div class="radio-option-description">
-                                        ✅ Recommended for production<br>
-                                        • Better lifecycle management<br>
-                                        • Reusable across resources<br>
-                                        • Survives resource deletion
-                                    </div>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="identity_type" id="identity_user_assigned" value="user_assigned" checked>
+                            <div class="radio-option-content">
+                                <div class="radio-option-title">User Assigned Managed Identity</div>
+                                <div class="radio-option-description">
+                                    Recommended for production. Allows sharing identity across multiple resources
+                                    and provides better lifecycle management.
                                 </div>
                             </div>
+                        </label>
 
-                            <div class="radio-option" onclick="selectRadio('identity_type', 'system_assigned')">
-                                <input type="radio" name="identity_type" id="identity_system_assigned" value="system_assigned">
-                                <div class="radio-option-content">
-                                    <div class="radio-option-title">System Assigned Managed Identity</div>
-                                    <div class="radio-option-description">
-                                        ⚠️ Simpler but less flexible<br>
-                                        • Tied to resource lifecycle<br>
-                                        • One per resource<br>
-                                        • Good for simple scenarios
-                                    </div>
+                        <label class="radio-option">
+                            <input type="radio" name="identity_type" id="identity_system_assigned" value="system_assigned">
+                            <div class="radio-option-content">
+                                <div class="radio-option-title">System Assigned Managed Identity</div>
+                                <div class="radio-option-description">
+                                    Simpler setup. Identity is tied to the lifecycle of the resource.
                                 </div>
                             </div>
-                        </div>
+                        </label>
                     </div>
 
                     <div class="button-group">
@@ -836,40 +242,38 @@
                     </div>
                 </div>
 
-                <!-- Step 4: Databricks Settings -->
+                <!-- Step 4: Databricks Configuration -->
                 <div class="step" id="step4">
                     <div class="step-title">Databricks Configuration</div>
-                    <div class="step-description">Configure Unity Catalog and workspace settings</div>
+                    <div class="step-description">Configure Azure Databricks settings</div>
 
                     <div id="databricksContent">
                         <div class="form-group">
                             <label>Unity Catalog Metastore ID</label>
                             <input type="text" id="databricks_uc_metastore_id" placeholder="Leave empty if not using Unity Catalog">
-                            <div class="help-text">Required only for existing Unity Catalog</div>
+                            <div class="help-text">Optional: Specify if you want to enable Unity Catalog</div>
                         </div>
 
                         <div class="form-group">
                             <label>Databricks Account ID</label>
                             <input type="text" id="databricks_account_id" placeholder="Required if using Unity Catalog">
-                            <div class="help-text">Your Databricks account ID</div>
                         </div>
 
-                        <div class="checkbox-group" onclick="toggleCheckbox('first_environment')">
+                        <div class="checkbox-group">
                             <input type="checkbox" id="first_environment">
-                            <label>First Environment (Creates grants)</label>
+                            <label for="first_environment">This is the first environment (creates Unity Catalog resources)</label>
                         </div>
 
                         <div class="form-group">
-                            <label>Schema Names</label>
+                            <label>Schema Names (comma-separated)</label>
                             <input type="text" id="databricks_schema_names" value="bronze,silver,gold" placeholder="bronze,silver,gold">
-                            <div class="help-text">Comma-separated list of schema names to create</div>
                         </div>
                     </div>
 
                     <div id="noDatabricksContent" style="display: none;">
                         <div class="info-box info">
-                            <div class="info-box-title">Databricks not selected</div>
-                            <div>You can skip this step or go back to enable Databricks.</div>
+                            <div class="info-box-title">Databricks Not Selected</div>
+                            <div>You haven't selected Azure Databricks. Click Previous to add it to your deployment.</div>
                         </div>
                     </div>
 
@@ -882,44 +286,40 @@
                 <!-- Step 5: Networking -->
                 <div class="step" id="step5">
                     <div class="step-title">Networking Configuration</div>
-                    <div class="step-description">Configure private networking and connectivity</div>
+                    <div class="step-description">Configure private networking for your data platform</div>
 
-                    <div class="checkbox-group" onclick="toggleCheckbox('include_networking'); updateNetworkingVisibility();">
+                    <div class="checkbox-group">
                         <input type="checkbox" id="include_networking">
-                        <label>Enable Private Networking</label>
+                        <label for="include_networking">Enable Private Networking (Recommended for Production)</label>
                     </div>
 
                     <div id="networkingContent" style="display: none; margin-top: 16px;">
                         <div class="form-group">
-                            <label>Networking Resource Group <span class="required">*</span></label>
+                            <label>Networking Resource Group Name</label>
                             <input type="text" id="networking_resource_group_name" placeholder="rg-networking">
                         </div>
 
                         <div class="form-group">
-                            <label>VNet Name <span class="required">*</span></label>
+                            <label>VNet Name</label>
                             <input type="text" id="vnet_name" placeholder="vnet-dataplatform">
                         </div>
 
                         <div class="form-group">
-                            <label>VNet Address Space <span class="required">*</span></label>
+                            <label>VNet Address Space</label>
                             <input type="text" id="vnet_address_space" value="10.0.0.0/16" placeholder="10.0.0.0/16">
                         </div>
 
                         <div class="form-group">
-                            <label>Data Platform Subnet CIDR <span class="required">*</span></label>
+                            <label>Data Platform Subnet CIDR</label>
                             <input type="text" id="data_platform_subnet_cidr_block" value="10.0.5.0/24">
-                        </div>
-
-                        <div class="info-box info">
-                            <div class="info-box-title">Private Endpoints</div>
-                            <div>Private endpoints will be automatically created for all selected resources with IPs from the data platform subnet.</div>
+                            <div class="help-text">This subnet will host private endpoints for your data services</div>
                         </div>
                     </div>
 
                     <div id="noNetworkingContent">
-                        <div class="info-box warning" style="margin-top: 16px;">
-                            <div class="info-box-title">⚠️ Public Access</div>
-                            <div>Resources will use public internet access. Not recommended for production.</div>
+                        <div class="info-box warning">
+                            <div class="info-box-title">Public Access</div>
+                            <div>Without private networking, resources will be accessible via public endpoints. This is not recommended for production environments.</div>
                         </div>
                     </div>
 
@@ -929,108 +329,104 @@
                     </div>
                 </div>
 
-                <!-- Step 6: Resource Config -->
+                <!-- Step 6: Resource-Specific Configuration -->
                 <div class="step" id="step6">
                     <div class="step-title">Resource Configuration</div>
-                    <div class="step-description">Configure specific resource settings</div>
+                    <div class="step-description">Configure service-specific settings</div>
 
-                    <!-- Event Hub Config -->
                     <div id="eventhubConfig" style="display: none; margin-bottom: 20px;">
-                        <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 12px; font-size: 14px;">Event Hub Configuration</div>
-                            
-                            <div class="form-group">
-                                <label>Namespace SKU</label>
-                                <select id="eventhub_sku">
-                                    <option value="Basic">Basic</option>
-                                    <option value="Standard" selected>Standard</option>
-                                    <option value="Premium">Premium</option>
-                                </select>
-                            </div>
+                        <div class="info-box info">
+                            <div class="info-box-title">Event Hub Configuration</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Partition Count</label>
-                                <input type="number" id="eventhub_partition_count" value="4" min="1" max="32">
-                            </div>
+                        <div class="form-group">
+                            <label>Event Hub SKU</label>
+                            <select id="eventhub_sku">
+                                <option value="Basic">Basic</option>
+                                <option value="Standard" selected>Standard</option>
+                                <option value="Premium">Premium</option>
+                            </select>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Message Retention (days)</label>
-                                <input type="number" id="eventhub_message_retention" value="1" min="1" max="90">
-                            </div>
+                        <div class="form-group">
+                            <label>Partition Count</label>
+                            <input type="number" id="eventhub_partition_count" value="4" min="1" max="32">
+                        </div>
 
-                            <div class="checkbox-group" onclick="toggleCheckbox('eventhub_enable_capture')">
-                                <input type="checkbox" id="eventhub_enable_capture" checked>
-                                <label>Enable Capture to Data Lake</label>
-                            </div>
+                        <div class="form-group">
+                            <label>Message Retention (days)</label>
+                            <input type="number" id="eventhub_message_retention" value="1" min="1" max="90">
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="eventhub_enable_capture" checked>
+                            <label for="eventhub_enable_capture">Enable Capture to Storage</label>
                         </div>
                     </div>
 
-                    <!-- SQL Config -->
                     <div id="sqlConfig" style="display: none; margin-bottom: 20px;">
-                        <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 12px; font-size: 14px;">SQL Database Configuration</div>
-                            
-                            <div class="form-group">
-                                <label>Admin Username</label>
-                                <input type="text" id="sql_server_admin_login_username" placeholder="sqladmin">
-                            </div>
+                        <div class="info-box info">
+                            <div class="info-box-title">SQL Database Configuration</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Admin Object ID (EntraID)</label>
-                                <input type="text" id="sql_server_admin_object_id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-                                <div class="help-text">Object ID of the SQL admin user/group in EntraID</div>
-                            </div>
+                        <div class="form-group">
+                            <label>Admin Login Username</label>
+                            <input type="text" id="sql_server_admin_login_username" placeholder="sqladmin">
+                        </div>
 
-                            <div class="form-group">
-                                <label>Database Type</label>
-                                <select id="sql_database_type">
-                                    <option value="DTU" selected>DTU-based</option>
-                                    <option value="vCore">vCore-based</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label>Admin Object ID (Azure AD)</label>
+                            <input type="text" id="sql_server_admin_object_id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+                            <div class="help-text">Azure AD Object ID for the database administrator</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label>SKU</label>
-                                <select id="sql_database_sku">
-                                    <option value="Basic" selected>Basic</option>
-                                    <option value="S0">S0 (Standard)</option>
-                                    <option value="S1">S1 (Standard)</option>
-                                    <option value="P1">P1 (Premium)</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label>Database SKU Type</label>
+                            <select id="sql_database_type">
+                                <option value="DTU" selected>DTU-based</option>
+                                <option value="vCore">vCore-based</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Database SKU</label>
+                            <select id="sql_database_sku">
+                                <option value="Basic" selected>Basic</option>
+                                <option value="S0">Standard S0</option>
+                                <option value="S1">Standard S1</option>
+                                <option value="S2">Standard S2</option>
+                                <option value="P1">Premium P1</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Azure Function Config -->
                     <div id="functionConfig" style="display: none; margin-bottom: 20px;">
-                        <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <div style="font-weight: 700; color: var(--accent-primary); margin-bottom: 12px; font-size: 14px;">Azure Function Configuration</div>
-                            
-                            <div class="form-group">
-                                <label>Plan Type</label>
-                                <select id="function_plan_type">
-                                    <option value="Consumption" selected>Consumption</option>
-                                    <option value="Premium">Premium</option>
-                                    <option value="Dedicated">Dedicated (App Service Plan)</option>
-                                </select>
-                            </div>
+                        <div class="info-box info">
+                            <div class="info-box-title">Azure Functions Configuration</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label>Runtime</label>
-                                <select id="function_runtime">
-                                    <option value="dotnet">C# (.NET)</option>
-                                    <option value="node">Node.js</option>
-                                    <option value="python" selected>Python</option>
-                                    <option value="java">Java</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label>Hosting Plan Type</label>
+                            <select id="function_plan_type">
+                                <option value="Consumption" selected>Consumption</option>
+                                <option value="Premium">Premium</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Runtime</label>
+                            <select id="function_runtime">
+                                <option value="python" selected>Python</option>
+                                <option value="node">Node.js</option>
+                                <option value="dotnet">. NET</option>
+                            </select>
                         </div>
                     </div>
 
                     <div id="noResourceConfig">
                         <div class="info-box info">
-                            <div class="info-box-title">No additional configuration needed</div>
-                            <div>Selected resources will use default configurations.</div>
+                            <div class="info-box-title">No Additional Configuration Needed</div>
+                            <div>The selected services don't require additional configuration at this stage.</div>
                         </div>
                     </div>
 
@@ -1070,1591 +466,8 @@
         </div>
     </div>
 
-    <script>
-        let currentStep = 0;
-        let currentFile = 'main.tf';
-        let generatedFiles = {};
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const themeToggle = document.getElementById('themeToggle');
-            const currentTheme = html.getAttribute('data-theme');
-            
-            if (currentTheme === 'dark') {
-                html.removeAttribute('data-theme');
-                themeToggle.textContent = '🌙';
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.setAttribute('data-theme', 'dark');
-                themeToggle.textContent = '☀️';
-                localStorage.setItem('theme', 'dark');
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                document.getElementById('themeToggle').textContent = '☀️';
-            }
-            updateProgress();
-        });
-
-        function nextStep() {
-            const currentStepEl = document.getElementById(`step${currentStep}`);
-            currentStepEl.classList.remove('active');
-
-            const stepCircle = document.querySelector(`.progress-step[data-step="${currentStep}"]`);
-            stepCircle.classList.add('completed');
-
-            currentStep++;
-            
-            const deploymentType = document.querySelector('input[name="deployment_type"]:checked').value;
-            const isGreenfield = deploymentType === 'greenfield';
-            
-            // Step 2: Show/hide resources based on deployment type
-            if (currentStep === 2) {
-                if (isGreenfield) {
-                    document.getElementById('greenfieldNote').style.display = 'block';
-                    document.getElementById('brownfieldResources').style.display = 'none';
-                } else {
-                    document.getElementById('greenfieldNote').style.display = 'none';
-                    document.getElementById('brownfieldResources').style.display = 'block';
-                }
-            }
-            
-            // For greenfield, skip to review after step 2
-            if (isGreenfield && currentStep === 3) {
-                currentStep = 7; // Jump to review
-            }
-            
-            // Step 4: Show/hide Databricks config
-            if (currentStep === 4) {
-                const hasDatabricks = document.getElementById('include_databricks')?.checked;
-                if (hasDatabricks) {
-                    document.getElementById('databricksContent').style.display = 'block';
-                    document.getElementById('noDatabricksContent').style.display = 'none';
-                } else {
-                    document.getElementById('databricksContent').style.display = 'none';
-                    document.getElementById('noDatabricksContent').style.display = 'block';
-                }
-            }
-            
-            // Step 6: Show/hide resource configs
-            if (currentStep === 6) {
-                updateResourceConfigVisibility();
-            }
-
-            // Step 7: Generate summary
-            if (currentStep === 7) {
-                generateSummary();
-            }
-
-            const nextStepEl = document.getElementById(`step${currentStep}`);
-            nextStepEl.classList.add('active');
-
-            updateProgress();
-        }
-
-        function prevStep() {
-            const currentStepEl = document.getElementById(`step${currentStep}`);
-            currentStepEl.classList.remove('active');
-
-            const stepCircle = document.querySelector(`.progress-step[data-step="${currentStep}"]`);
-            stepCircle.classList.remove('completed');
-
-            const deploymentType = document.querySelector('input[name="deployment_type"]:checked').value;
-            const isGreenfield = deploymentType === 'greenfield';
-            
-            // For greenfield jumping back from review
-            if (isGreenfield && currentStep === 7) {
-                currentStep = 2; // Jump back to resources
-            } else {
-                currentStep--;
-            }
-
-            const prevStepEl = document.getElementById(`step${currentStep}`);
-            prevStepEl.classList.add('active');
-
-            updateProgress();
-        }
-
-        function updateProgress() {
-            document.querySelectorAll('.progress-step').forEach(step => {
-                const stepNum = parseInt(step.dataset.step);
-                step.classList.remove('active');
-                if (stepNum === currentStep) {
-                    step.classList.add('active');
-                }
-            });
-
-            const progress = (currentStep / 7) * 100;
-            document.getElementById('progressLine').style.width = `${progress}%`;
-        }
-
-        function updateNetworkingVisibility() {
-            const enabled = document.getElementById('include_networking').checked;
-            document.getElementById('networkingContent').style.display = enabled ? 'block' : 'none';
-            document.getElementById('noNetworkingContent').style.display = enabled ? 'none' : 'block';
-        }
-
-        function updateResourceConfigVisibility() {
-            const eventhubEnabled = document.getElementById('include_eventhub')?.checked;
-            const sqlEnabled = document.getElementById('include_sql_database')?.checked;
-            const functionEnabled = document.getElementById('include_azure_function')?.checked;
-            
-            document.getElementById('eventhubConfig').style.display = eventhubEnabled ? 'block' : 'none';
-            document.getElementById('sqlConfig').style.display = sqlEnabled ? 'block' : 'none';
-            document.getElementById('functionConfig').style.display = functionEnabled ? 'block' : 'none';
-            
-            const anyConfigShown = eventhubEnabled || sqlEnabled || functionEnabled;
-            document.getElementById('noResourceConfig').style.display = anyConfigShown ? 'none' : 'block';
-        }
-
-        function toggleCheckbox(id) {
-            const checkbox = document.getElementById(id);
-            checkbox.checked = !checkbox.checked;
-        }
-
-        function selectRadio(name, value) {
-            document.getElementById(`${name.split('_')[0]}_${value}`).checked = true;
-        }
-
-        function generateSummary() {
-            const config = getConfig();
-            const isGreenfield = config.deployment_type === 'greenfield';
-            
-            let summaryHtml = '<div style="margin-bottom: 24px;">';
-            
-            if (isGreenfield) {
-                summaryHtml += `
-                    <div class="info-box info">
-                        <div class="info-box-title">🌱 Greenfield Deployment - CAF Foundation</div>
-                        <div style="margin-top: 8px;">
-                            Your infrastructure will include:<br><br>
-                            <strong>Management & Governance:</strong><br>
-                            • Management group hierarchy (Platform, Landing Zones, Decommissioned, Sandboxes)<br>
-                            • Azure Policy baseline with 100+ policies<br>
-                            • RBAC assignments and security baseline<br><br>
-                            
-                            <strong>Networking:</strong><br>
-                            • Hub-spoke network topology (10.100.0.0/16)<br>
-                            • Azure Firewall (Standard tier, 3 zones)<br>
-                            • Private DNS zones for all PaaS services<br><br>
-                            
-                            <strong>Security & Monitoring:</strong><br>
-                            • Microsoft Defender for Cloud<br>
-                            • Log Analytics workspace (30-day retention)<br>
-                            • Diagnostic settings<br><br>
-                            
-                            <strong>Identity:</strong><br>
-                            • Managed identities configuration<br>
-                            • Azure AD integration<br>
-                        </div>
-                    </div>
-                `;
-            } else {
-                summaryHtml += `
-                    <div class="info-box info">
-                        <div class="info-box-title">🏗️ Brownfield Deployment - Data Platform</div>
-                        <div style="margin-top: 8px;">
-                            <strong>Selected Resources:</strong><br>
-                            ${config.include_storage_account ? '✓ Storage Account (Data Lake Gen2)<br>' : ''}
-                            ${config.include_databricks ? '✓ Azure Databricks<br>' : ''}
-                            ${config.include_data_factory ? '✓ Azure Data Factory<br>' : ''}
-                            ${config.include_eventhub ? '✓ Azure Event Hub (' + config.eventhub_sku + ')<br>' : ''}
-                            ${config.include_sql_database ? '✓ Azure SQL Database (' + config.sql_database_sku + ')<br>' : ''}
-                            ${config.include_azure_function ? '✓ Azure Function (' + config.function_plan_type + ')<br>' : ''}
-                            <br>
-                            <strong>Identity:</strong> ${config.identity_type === 'user_assigned' ? 'User Assigned Managed Identity' : 'System Assigned Managed Identity'}<br>
-                            ${config.include_networking ? '<strong>Networking:</strong> ✓ Private networking enabled<br>' : '<strong>Networking:</strong> Public access (not recommended for production)<br>'}
-                            ${config.include_databricks && config.databricks_uc_metastore_id ? '<strong>Databricks:</strong> Unity Catalog enabled<br>' : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            summaryHtml += `
-                <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 16px;">
-                    <div style="font-weight: 600; margin-bottom: 12px;">Configuration Details</div>
-                    <div style="font-size: 13px; color: var(--text-secondary);">
-                        <div style="margin-bottom: 8px;"><strong>Organization:</strong> ${config.company_abbreviation}</div>
-                        <div style="margin-bottom: 8px;"><strong>Project:</strong> ${config.project_name}</div>
-                        <div style="margin-bottom: 8px;"><strong>Environment:</strong> ${config.environment}</div>
-                        <div style="margin-bottom: 8px;"><strong>Region:</strong> ${config.location}</div>
-                        <div><strong>Deployment Type:</strong> ${isGreenfield ? 'Greenfield (CAF Foundation)' : 'Brownfield (Existing Landing Zone)'}</div>
-                    </div>
-                </div>
-            `;
-            
-            if (!isGreenfield && config.include_networking) {
-                summaryHtml += `
-                    <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 16px;">
-                        <div style="font-weight: 600; margin-bottom: 12px;">Networking Configuration</div>
-                        <div style="font-size: 13px; color: var(--text-secondary);">
-                            <div style="margin-bottom: 8px;"><strong>VNet:</strong> ${config.vnet_name} (${config.vnet_address_space})</div>
-                            <div style="margin-bottom: 8px;"><strong>Data Platform Subnet:</strong> ${config.data_platform_subnet_cidr_block}</div>
-                            <div><strong>Private Endpoints:</strong> Enabled for all resources</div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            summaryHtml += '</div>';
-            
-            document.getElementById('summaryContent').innerHTML = summaryHtml;
-        }
-
-        function getConfig() {
-            return {
-                deployment_type: document.querySelector('input[name="deployment_type"]:checked').value,
-                tenant_id: document.getElementById('tenant_id').value,
-                subscription_id: document.getElementById('subscription_id').value,
-                owner: document.getElementById('owner').value,
-                company_abbreviation: document.getElementById('company_abbreviation').value,
-                project_name: document.getElementById('project_name').value,
-                environment: document.getElementById('environment').value,
-                location: document.getElementById('location').value,
-                // Resources
-                include_storage_account: document.getElementById('include_storage_account')?.checked || false,
-                include_databricks: document.getElementById('include_databricks')?.checked || false,
-                include_data_factory: document.getElementById('include_data_factory')?.checked || false,
-                include_eventhub: document.getElementById('include_eventhub')?.checked || false,
-                include_sql_database: document.getElementById('include_sql_database')?.checked || false,
-                include_azure_function: document.getElementById('include_azure_function')?.checked || false,
-                // Identity
-                identity_type: document.querySelector('input[name="identity_type"]:checked')?.value || 'user_assigned',
-                // Databricks
-                databricks_uc_metastore_id: document.getElementById('databricks_uc_metastore_id')?.value || '',
-                databricks_account_id: document.getElementById('databricks_account_id')?.value || '',
-                first_environment: document.getElementById('first_environment')?.checked || false,
-                databricks_schema_names: document.getElementById('databricks_schema_names')?.value || 'bronze,silver,gold',
-                // Networking
-                include_networking: document.getElementById('include_networking')?.checked || false,
-                networking_resource_group_name: document.getElementById('networking_resource_group_name')?.value || '',
-                vnet_name: document.getElementById('vnet_name')?.value || '',
-                vnet_address_space: document.getElementById('vnet_address_space')?.value || '10.0.0.0/16',
-                data_platform_subnet_cidr_block: document.getElementById('data_platform_subnet_cidr_block')?.value || '10.0.5.0/24',
-                // Event Hub
-                eventhub_sku: document.getElementById('eventhub_sku')?.value || 'Standard',
-                eventhub_partition_count: document.getElementById('eventhub_partition_count')?.value || '4',
-                eventhub_message_retention: document.getElementById('eventhub_message_retention')?.value || '1',
-                eventhub_enable_capture: document.getElementById('eventhub_enable_capture')?.checked || false,
-                // SQL Database
-                sql_server_admin_login_username: document.getElementById('sql_server_admin_login_username')?.value || '',
-                sql_server_admin_object_id: document.getElementById('sql_server_admin_object_id')?.value || '',
-                sql_database_type: document.getElementById('sql_database_type')?.value || 'DTU',
-                sql_database_sku: document.getElementById('sql_database_sku')?.value || 'Basic',
-                // Azure Function
-                function_plan_type: document.getElementById('function_plan_type')?.value || 'Consumption',
-                function_runtime: document.getElementById('function_runtime')?.value || 'python'
-            };
-        }
-
-        function generateTerraform() {
-            const config = getConfig();
-            generatedFiles = {};
-            
-            if (config.deployment_type === 'greenfield') {
-                generatedFiles['main.tf'] = generateCAFMain(config);
-                generatedFiles['variables.tf'] = generateCAFVariables(config);
-                generatedFiles['terraform.tfvars'] = generateCAFTfvars(config);
-            } else {
-                generatedFiles['main.tf'] = generateBrownfieldMain(config);
-                generatedFiles['variables.tf'] = generateBrownfieldVariables(config);
-                generatedFiles['terraform.tfvars'] = generateBrownfieldTfvars(config);
-            }
-            
-            generatedFiles['providers.tf'] = generateProviders(config);
-            generatedFiles['README.md'] = generateReadme(config);
-
-            createFileTabs();
-            displayFile('main.tf');
-        }
-
-        function generateCAFMain(config) {
-            return `# Azure Cloud Adoption Framework - Enterprise-Scale Landing Zone
-# Generated by EpicData IaC Generator
-# Deployment Type: Greenfield
-
-terraform {
-  required_version = ">= 1.3"
-  
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-  }
-}
-
-# Use the official Azure Landing Zone Terraform module
-module "enterprise_scale" {
-  source  = "Azure/caf-enterprise-scale/azurerm"
-  version = "~> 6.0"
-
-  # Root management group configuration
-  default_location = var.location
-  root_parent_id   = data.azurerm_client_config.current.tenant_id
-  root_id          = "\${var.company_abbreviation}-\${var.environment}"
-  root_name        = "\${var.company_abbreviation}-\${var.environment}"
-
-  # Deploy core landing zone resources
-  deploy_core_landing_zones = true
-  
-  # Deploy demo landing zones (Corp, Online, SAP)
-  deploy_demo_landing_zones = true
-
-  # Enable management resources (Log Analytics, Automation)
-  deploy_management_resources = true
-  
-  subscription_id_management = var.subscription_id
-  
-  configure_management_resources = {
-    settings = {
-      log_analytics = {
-        enabled = true
-        config = {
-          retention_in_days = 30
-          sku               = "PerGB2018"
-        }
-      }
-      security_center = {
-        enabled = true
-        config = {
-          email_security_contact = var.owner
-        }
-      }
-    }
-  }
-
-  # Enable connectivity resources (Hub networking, Firewall, VPN Gateway)
-  deploy_connectivity_resources = true
-  
-  subscription_id_connectivity = var.subscription_id
-  
-  configure_connectivity_resources = {
-    settings = {
-      hub_networks = [
-        {
-          enabled = true
-          config = {
-            address_space                = ["10.100.0.0/16"]
-            location                     = var.location
-            enable_hub_network_mesh_peering = false
-            
-            azure_firewall = {
-              enabled = true
-              config = {
-                sku_name              = "AZFW_VNet"
-                sku_tier              = "Standard"
-                enable_dns_proxy      = true
-                availability_zones = {
-                  zone_1 = true
-                  zone_2 = true
-                  zone_3 = true
-                }
-              }
-            }
-            
-            dns = {
-              enabled = true
-              config = {
-                private_dns_zones = [
-                  "privatelink.blob.core.windows.net",
-                  "privatelink.dfs.core.windows.net",
-                  "privatelink.database.windows.net",
-                  "privatelink.azuredatabricks.net",
-                  "privatelink.datafactory.azure.net",
-                  "privatelink.vaultcore.azure.net"
-                ]
-              }
-            }
-          }
-        }
-      ]
-      
-      ddos_protection_plan = {
-        enabled = false
-      }
-    }
-  }
-
-  # Enable identity resources
-  deploy_identity_resources = false
-
-  # Custom library path for additional policies
-  library_path = "\${path.root}/lib"
-
-  # Tags applied to all resources
-  default_tags = {
-    Owner       = var.owner
-    Project     = var.project_name
-    Environment = var.environment
-    ManagedBy   = "Terraform-CAF"
-    DeploymentType = "Greenfield"
-  }
-}
-
-# Data source to get current client config
-data "azurerm_client_config" "current" {}
-
-# Outputs
-output "root_management_group_id" {
-  description = "ID of the root management group"
-  value       = module.enterprise_scale.azurerm_management_group.level_1["\${var.company_abbreviation}-\${var.environment}"].id
-}
-
-output "management_subscription_id" {
-  description = "Management subscription ID"
-  value       = var.subscription_id
-}
-
-output "log_analytics_workspace_id" {
-  description = "Log Analytics workspace ID"
-  value       = module.enterprise_scale.azurerm_log_analytics_workspace.management[0].id
-}
-
-output "hub_virtual_network_id" {
-  description = "Hub virtual network ID"
-  value       = try(module.enterprise_scale.azurerm_virtual_network.connectivity[0].id, null)
-}
-
-output "azure_firewall_id" {
-  description = "Azure Firewall ID"
-  value       = try(module.enterprise_scale.azurerm_firewall.connectivity[0].id, null)
-}
-`;
-        }
-
-        function generateCAFVariables(config) {
-            return `# Variables for CAF Enterprise-Scale Landing Zone
-
-variable "tenant_id" {
-  description = "Azure AD tenant ID"
-  type        = string
-}
-
-variable "subscription_id" {
-  description = "Subscription ID for management and connectivity resources"
-  type        = string
-}
-
-variable "owner" {
-  description = "Resource owner email"
-  type        = string
-}
-
-variable "company_abbreviation" {
-  description = "Company abbreviation for naming"
-  type        = string
-  validation {
-    condition     = can(regex("^[a-z0-9]{2,8}$", var.company_abbreviation))
-    error_message = "Company abbreviation must be 2-8 lowercase alphanumeric characters."
-  }
-}
-
-variable "project_name" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment name (dev/test/prod)"
-  type        = string
-  validation {
-    condition     = contains(["dev", "test", "prod"], var.environment)
-    error_message = "Environment must be dev, test, or prod."
-  }
-}
-
-variable "location" {
-  description = "Azure region for resources"
-  type        = string
-  default     = "westeurope"
-}
-`;
-        }
-
-        function generateCAFTfvars(config) {
-            return `# Terraform Variables for CAF Landing Zone
-
-tenant_id            = "${config.tenant_id}"
-subscription_id      = "${config.subscription_id}"
-owner                = "${config.owner}"
-company_abbreviation = "${config.company_abbreviation}"
-project_name         = "${config.project_name}"
-environment          = "${config.environment}"
-location             = "${config.location}"
-`;
-        }
-
-        function generateBrownfieldMain(config) {
-            const identityBlock = config.identity_type === 'user_assigned' 
-                ? `type         = "SystemAssigned, UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.main.id]`
-                : `type = "SystemAssigned"`;
-
-            return `# Brownfield Data Platform Deployment
-# Generated by EpicData IaC Generator
-# Assumes existing Azure Landing Zone
-# Identity Type: ${config.identity_type === 'user_assigned' ? 'User Assigned' : 'System Assigned'}
-
-data "azurerm_client_config" "current" {}
-
-locals {
-  tags = {
-    Owner       = var.owner
-    Project     = var.project_name
-    Environment = var.environment
-    ManagedBy   = "Terraform"
-  }
-}
-
-# Resource Group
-resource "azurerm_resource_group" "main" {
-  name     = "rg-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location = var.location
-  tags     = local.tags
-}
-
-${config.identity_type === 'user_assigned' ? `
-# User Assigned Managed Identity
-resource "azurerm_user_assigned_identity" "main" {
-  name                = "uai-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  tags                = local.tags
-}
-` : ''}
-
-${config.include_networking ? `
-# Networking Resources
-resource "azurerm_resource_group" "networking" {
-  name     = var.networking_resource_group_name
-  location = var.location
-  tags     = local.tags
-}
-
-resource "azurerm_virtual_network" "main" {
-  name                = var.vnet_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  address_space       = [var.vnet_address_space]
-  tags                = local.tags
-}
-
-resource "azurerm_subnet" "data_platform" {
-  name                 = "snet-data-platform-\${var.environment}"
-  resource_group_name  = azurerm_resource_group.networking.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.data_platform_subnet_cidr_block]
-}
-
-resource "azurerm_network_security_group" "data_platform" {
-  name                = "nsg-data-platform-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_subnet_network_security_group_association" "data_platform" {
-  subnet_id                 = azurerm_subnet.data_platform.id
-  network_security_group_id = azurerm_network_security_group.data_platform.id
-}
-
-# Private DNS Zones
-resource "azurerm_private_dns_zone" "key_vault" {
-  name                = "privatelink.vaultcore.azure.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
-  name                  = "kv-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.key_vault.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-# Key Vault
-resource "azurerm_key_vault" "main" {
-  name                = "kv-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  sku_name            = "standard"
-  tenant_id           = var.tenant_id
-  
-  purge_protection_enabled  = true
-  enable_rbac_authorization = true
-  public_network_access_enabled = ${!config.include_networking}
-
-  identity {
-    ${identityBlock}
-  }
-
-  tags = local.tags
-}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "key_vault" {
-  name                = "pep-keyvault-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-keyvault-connection"
-    private_connection_resource_id = azurerm_key_vault.main.id
-    is_manual_connection           = false
-    subresource_names              = ["vault"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.key_vault.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-
-${config.include_storage_account ? `
-# Storage Account (Data Lake Gen2)
-${config.include_networking ? `
-resource "azurerm_private_dns_zone" "storage_blob" {
-  name                = "privatelink.blob.core.windows.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob" {
-  name                  = "blob-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_blob.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-
-resource "azurerm_private_dns_zone" "storage_dfs" {
-  name                = "privatelink.dfs.core.windows.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_dfs" {
-  name                  = "dfs-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_dfs.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-resource "azurerm_storage_account" "data_lake" {
-  name                = "dls\${var.company_abbreviation}\${var.project_name}\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  account_kind             = "StorageV2"
-  is_hns_enabled           = true
-  
-  public_network_access_enabled = ${!config.include_networking}
-  
-  identity {
-    ${identityBlock}
-  }
-  
-  tags = local.tags
-}
-
-resource "azurerm_storage_container" "bronze" {
-  name                  = "bronze"
-  storage_account_id    = azurerm_storage_account.data_lake.id
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "silver" {
-  name                  = "silver"
-  storage_account_id    = azurerm_storage_account.data_lake.id
-  container_access_type = "private"
-}
-
-resource "azurerm_storage_container" "gold" {
-  name                  = "gold"
-  storage_account_id    = azurerm_storage_account.data_lake.id
-  container_access_type = "private"
-}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "storage_blob" {
-  name                = "pep-storage-blob-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-storage-blob-connection"
-    private_connection_resource_id = azurerm_storage_account.data_lake.id
-    is_manual_connection           = false
-    subresource_names              = ["blob"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.storage_blob.id]
-  }
-
-  tags = local.tags
-}
-
-resource "azurerm_private_endpoint" "storage_dfs" {
-  name                = "pep-storage-dfs-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-storage-dfs-connection"
-    private_connection_resource_id = azurerm_storage_account.data_lake.id
-    is_manual_connection           = false
-    subresource_names              = ["dfs"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.storage_dfs.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-` : ''}
-
-${config.include_databricks ? `
-# Azure Databricks
-${config.include_networking ? `
-resource "azurerm_private_dns_zone" "databricks" {
-  name                = "privatelink.azuredatabricks.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "databricks" {
-  name                  = "databricks-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.databricks.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-resource "azurerm_databricks_workspace" "main" {
-  name                        = "dbr-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location                    = var.location
-  resource_group_name         = azurerm_resource_group.main.name
-  managed_resource_group_name = "rg-managed-dbr-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  sku                         = "premium"
-  
-  public_network_access_enabled = ${!config.include_networking}
-  
-  tags = local.tags
-}
-
-${config.databricks_uc_metastore_id ? `
-# Databricks Unity Catalog Configuration
-# Note: This requires the Databricks provider to be configured
-# See providers.tf for Databricks provider setup
-` : ''}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "databricks" {
-  name                = "pep-databricks-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-databricks-connection"
-    private_connection_resource_id = azurerm_databricks_workspace.main.id
-    is_manual_connection           = false
-    subresource_names              = ["databricks_ui_api"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.databricks.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-` : ''}
-
-${config.include_data_factory ? `
-# Azure Data Factory
-${config.include_networking ? `
-resource "azurerm_private_dns_zone" "data_factory" {
-  name                = "privatelink.datafactory.azure.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "data_factory" {
-  name                  = "adf-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.data_factory.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-resource "azurerm_data_factory" "main" {
-  name                            = "adf-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location                        = var.location
-  resource_group_name             = azurerm_resource_group.main.name
-  managed_virtual_network_enabled = ${config.include_networking}
-  public_network_enabled          = ${!config.include_networking}
-  
-  identity {
-    ${identityBlock}
-  }
-  
-  tags = local.tags
-}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "data_factory" {
-  name                = "pep-datafactory-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-datafactory-connection"
-    private_connection_resource_id = azurerm_data_factory.main.id
-    is_manual_connection           = false
-    subresource_names              = ["dataFactory"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.data_factory.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-` : ''}
-
-${config.include_eventhub ? `
-# Event Hub Namespace
-${config.include_networking ? `
-resource "azurerm_private_dns_zone" "eventhub" {
-  name                = "privatelink.servicebus.windows.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "eventhub" {
-  name                  = "eventhub-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.eventhub.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-resource "azurerm_eventhub_namespace" "main" {
-  name                = "evhns-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  sku                 = var.eventhub_sku
-  capacity            = var.eventhub_sku == "Standard" ? 1 : null
-  
-  local_authentication_enabled  = false
-  public_network_access_enabled = ${!config.include_networking}
-  
-  identity {
-    ${identityBlock}
-  }
-  
-  tags = local.tags
-}
-
-resource "azurerm_eventhub" "main" {
-  name              = "evh-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  namespace_id      = azurerm_eventhub_namespace.main.id
-  partition_count   = var.eventhub_partition_count
-  message_retention = var.eventhub_message_retention
-
-  ${config.eventhub_enable_capture && config.include_storage_account ? `
-  capture_description {
-    enabled             = true
-    encoding            = "Avro"
-    interval_in_seconds = 300
-
-    destination {
-      name                = "EventHubArchive.AzureBlockBlob"
-      archive_name_format = "{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}"
-      storage_account_id  = azurerm_storage_account.data_lake.id
-      blob_container_name = "bronze"
-    }
-  }
-  ` : ''}
-}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "eventhub" {
-  name                = "pep-eventhub-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-eventhub-connection"
-    private_connection_resource_id = azurerm_eventhub_namespace.main.id
-    is_manual_connection           = false
-    subresource_names              = ["namespace"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.eventhub.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-` : ''}
-
-${config.include_sql_database ? `
-# SQL Server and Database
-${config.include_networking ? `
-resource "azurerm_private_dns_zone" "sql" {
-  name                = "privatelink.database.windows.net"
-  resource_group_name = azurerm_resource_group.networking.name
-  tags                = local.tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "sql" {
-  name                  = "sql-vnet-link"
-  resource_group_name   = azurerm_resource_group.networking.name
-  private_dns_zone_name = azurerm_private_dns_zone.sql.name
-  virtual_network_id    = azurerm_virtual_network.main.id
-  tags                  = local.tags
-}
-` : ''}
-
-resource "azurerm_mssql_server" "main" {
-  name                = "sql-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  version             = "12.0"
-  
-  azuread_administrator {
-    login_username              = var.sql_server_admin_login_username
-    object_id                   = var.sql_server_admin_object_id
-    tenant_id                   = var.tenant_id
-    azuread_authentication_only = true
-  }
-  
-  public_network_access_enabled = ${!config.include_networking}
-  
-  identity {
-    ${identityBlock}
-  }
-  
-  tags = local.tags
-}
-
-resource "azurerm_mssql_database" "main" {
-  name         = "sqldb-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  server_id    = azurerm_mssql_server.main.id
-  license_type = "LicenseIncluded"
-  sku_name     = var.sql_database_sku
-  max_size_gb  = 10
-  
-  tags = local.tags
-}
-
-${config.include_networking ? `
-resource "azurerm_private_endpoint" "sql" {
-  name                = "pep-sql-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.networking.name
-  subnet_id           = azurerm_subnet.data_platform.id
-
-  private_service_connection {
-    name                           = "pep-sql-connection"
-    private_connection_resource_id = azurerm_mssql_server.main.id
-    is_manual_connection           = false
-    subresource_names              = ["sqlServer"]
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [azurerm_private_dns_zone.sql.id]
-  }
-
-  tags = local.tags
-}
-` : ''}
-` : ''}
-
-${config.include_azure_function ? `
-# Azure Function
-resource "azurerm_service_plan" "function" {
-  name                = "asp-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
-  os_type             = "Linux"
-  sku_name            = "${config.function_plan_type === 'Consumption' ? 'Y1' : 'P1v2'}"
-  
-  tags = local.tags
-}
-
-resource "azurerm_storage_account" "function" {
-  name                     = "stfunc\${var.project_name}\${var.environment}"
-  location                 = var.location
-  resource_group_name      = azurerm_resource_group.main.name
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  tags                     = local.tags
-}
-
-resource "azurerm_linux_function_app" "main" {
-  name                       = "func-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
-  location                   = var.location
-  resource_group_name        = azurerm_resource_group.main.name
-  service_plan_id            = azurerm_service_plan.function.id
-  storage_account_name       = azurerm_storage_account.function.name
-  storage_account_access_key = azurerm_storage_account.function.primary_access_key
-
-  identity {
-    ${identityBlock}
-  }
-
-  site_config {
-    application_stack {
-      ${config.function_runtime === 'python' ? 'python_version = "3.11"' : ''}
-      ${config.function_runtime === 'node' ? 'node_version = "18"' : ''}
-      ${config.function_runtime === 'dotnet' ? 'dotnet_version = "8.0"' : ''}
-      ${config.function_runtime === 'java' ? 'java_version = "11"' : ''}
-    }
-  }
-
-  tags = local.tags
-}
-` : ''}
-`;
-        }
-
-        function generateBrownfieldVariables(config) {
-            return `# Variables for Brownfield Data Platform
-
-variable "tenant_id" {
-  description = "Azure AD tenant ID"
-  type        = string
-}
-
-variable "subscription_id" {
-  description = "Azure subscription ID"
-  type        = string
-}
-
-variable "owner" {
-  description = "Resource owner"
-  type        = string
-}
-
-variable "company_abbreviation" {
-  description = "Company abbreviation"
-  type        = string
-}
-
-variable "project_name" {
-  description = "Project name"
-  type        = string
-}
-
-variable "environment" {
-  description = "Environment (dev/test/prod)"
-  type        = string
-}
-
-variable "location" {
-  description = "Azure region"
-  type        = string
-  default     = "westeurope"
-}
-
-${config.include_networking ? `
-variable "networking_resource_group_name" {
-  description = "Networking resource group name"
-  type        = string
-}
-
-variable "vnet_name" {
-  description = "Virtual network name"
-  type        = string
-}
-
-variable "vnet_address_space" {
-  description = "VNet address space"
-  type        = string
-  default     = "10.0.0.0/16"
-}
-
-variable "data_platform_subnet_cidr_block" {
-  description = "Data platform subnet CIDR"
-  type        = string
-  default     = "10.0.5.0/24"
-}
-` : ''}
-
-${config.include_databricks && config.databricks_uc_metastore_id ? `
-variable "databricks_uc_metastore_id" {
-  description = "Unity Catalog Metastore ID"
-  type        = string
-  default     = "${config.databricks_uc_metastore_id}"
-}
-
-variable "databricks_account_id" {
-  description = "Databricks Account ID"
-  type        = string
-  default     = "${config.databricks_account_id}"
-}
-` : ''}
-
-${config.include_eventhub ? `
-variable "eventhub_sku" {
-  description = "Event Hub namespace SKU"
-  type        = string
-  default     = "${config.eventhub_sku}"
-}
-
-variable "eventhub_partition_count" {
-  description = "Event Hub partition count"
-  type        = number
-  default     = ${config.eventhub_partition_count}
-}
-
-variable "eventhub_message_retention" {
-  description = "Event Hub message retention in days"
-  type        = number
-  default     = ${config.eventhub_message_retention}
-}
-` : ''}
-
-${config.include_sql_database ? `
-variable "sql_server_admin_login_username" {
-  description = "SQL Server admin username"
-  type        = string
-  default     = "${config.sql_server_admin_login_username || 'sqladmin'}"
-}
-
-variable "sql_server_admin_object_id" {
-  description = "SQL Server admin object ID"
-  type        = string
-}
-
-variable "sql_database_sku" {
-  description = "SQL Database SKU"
-  type        = string
-  default     = "${config.sql_database_sku}"
-}
-` : ''}
-`;
-        }
-
-        function generateBrownfieldTfvars(config) {
-            return `# Terraform Variables
-
-tenant_id            = "${config.tenant_id}"
-subscription_id      = "${config.subscription_id}"
-owner                = "${config.owner}"
-company_abbreviation = "${config.company_abbreviation}"
-project_name         = "${config.project_name}"
-environment          = "${config.environment}"
-location             = "${config.location}"
-
-${config.include_networking ? `
-# Networking
-networking_resource_group_name = "${config.networking_resource_group_name}"
-vnet_name                      = "${config.vnet_name}"
-vnet_address_space             = "${config.vnet_address_space}"
-data_platform_subnet_cidr_block = "${config.data_platform_subnet_cidr_block}"
-` : ''}
-
-${config.include_databricks && config.databricks_uc_metastore_id ? `
-# Databricks Unity Catalog
-databricks_uc_metastore_id = "${config.databricks_uc_metastore_id}"
-databricks_account_id      = "${config.databricks_account_id}"
-` : ''}
-
-${config.include_eventhub ? `
-# Event Hub
-eventhub_sku               = "${config.eventhub_sku}"
-eventhub_partition_count   = ${config.eventhub_partition_count}
-eventhub_message_retention = ${config.eventhub_message_retention}
-` : ''}
-
-${config.include_sql_database ? `
-# SQL Database
-sql_server_admin_login_username = "${config.sql_server_admin_login_username || 'sqladmin'}"
-sql_server_admin_object_id      = "${config.sql_server_admin_object_id || 'REPLACE_WITH_OBJECT_ID'}"
-sql_database_sku                = "${config.sql_database_sku}"
-` : ''}
-`;
-        }
-
-        function generateProviders(config) {
-            return `# Provider Configuration
-
-terraform {
-  required_version = ">= 1.3"
-  
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.0"
-    }
-  }
-  
-  backend "azurerm" {}
-}
-
-provider "azurerm" {
-  features {
-    resource_group {
-      prevent_deletion_if_contains_resources = false
-    }
-    key_vault {
-      purge_soft_delete_on_destroy = false
-    }
-  }
-  
-  subscription_id = var.subscription_id
-}
-`;
-        }
-
-        function generateReadme(config) {
-            const isGreenfield = config.deployment_type === 'greenfield';
-            
-            return `# ${config.project_name} - Azure Infrastructure
-
-Generated by **EpicData IaC Generator**
-
-## Deployment Type: ${isGreenfield ? '🌱 Greenfield (CAF Foundation)' : '🏗️ Brownfield (Existing Landing Zone)'}
-
-### Configuration
-- **Organization**: ${config.company_abbreviation}
-- **Project**: ${config.project_name}
-- **Environment**: ${config.environment}
-- **Region**: ${config.location}
-
-${isGreenfield ? `
-## Cloud Adoption Framework Components
-
-This deployment creates a complete Azure landing zone following Microsoft's Cloud Adoption Framework (CAF) best practices:
-
-### Management Groups
-- **Root Management Group**: \`${config.company_abbreviation}-${config.environment}\`
-  - Platform
-    - Management (Log Analytics, Sentinel, Automation)
-    - Connectivity (Hub Network, Firewall, VPN)
-    - Identity
-  - Landing Zones
-    - Corp (Corporate workloads with connectivity)
-    - Online (Internet-facing workloads)
-    - SAP (SAP workloads)
-  - Sandboxes (Testing and experimentation)
-  - Decommissioned (Deprecated resources)
-
-### Governance & Security
-- **Azure Policy**: 100+ policies for security, compliance, and governance
-- **RBAC**: Role-based access control assignments
-- **Microsoft Defender for Cloud**: Security posture management
-- **Azure Sentinel**: SIEM and threat protection
-
-### Networking
-- **Hub-Spoke Topology**: Centralized hub network with firewall
-- **Azure Firewall**: Network security and traffic filtering
-- **Private DNS Zones**: For Azure PaaS services
-- **DDoS Protection**: Optional standard protection
-
-### Monitoring & Operations
-- **Log Analytics Workspace**: Centralized logging (30-day retention)
-- **Diagnostic Settings**: Configured for all resources
-- **Azure Monitor**: Metrics and alerts
-- **Automation Account**: Runbooks and automation
-
-### Best Practices Implemented
-✅ Management group hierarchy for governance at scale
-✅ Azure Policy for compliance and security baselines
-✅ Hub-spoke network architecture
-✅ Centralized logging and monitoring
-✅ Security baseline with Defender for Cloud
-✅ Private DNS zones for PaaS services
-✅ Managed identities (no passwords/keys)
-✅ Resource tagging strategy
-
-` : `
-## Data Platform Resources
-
-${config.include_storage_account ? '- ✅ Storage Account (Data Lake Gen2)' : ''}
-${config.include_databricks ? '- ✅ Azure Databricks' : ''}
-${config.include_data_factory ? '- ✅ Azure Data Factory' : ''}
-${config.include_eventhub ? '- ✅ Azure Event Hub' : ''}
-${config.include_sql_database ? '- ✅ Azure SQL Database' : ''}
-- ✅ Azure Key Vault
-
-`}
-
-## Prerequisites
-
-1. **Azure CLI** installed and authenticated
-   \`\`\`bash
-   az login
-   az account set --subscription "${config.subscription_id}"
-   \`\`\`
-
-2. **Terraform** >= 1.3
-   \`\`\`bash
-   terraform version
-   \`\`\`
-
-3. **Azure Permissions**: Contributor or Owner role on subscription
-
-${isGreenfield ? `
-4. **Management Group Permissions**: Management Group Contributor role
-` : ''}
-
-## Deployment Steps
-
-### 1. Initialize Terraform
-
-\`\`\`bash
-terraform init
-\`\`\`
-
-### 2. Review the Plan
-
-\`\`\`bash
-terraform plan
-\`\`\`
-
-${isGreenfield ? `
-**Expected resources**: ~150-200 resources including:
-- Management groups and policies
-- Hub network and firewall
-- Log Analytics and monitoring
-- Security configurations
-` : `
-**Expected resources**: Varies based on selected components
-`}
-
-### 3. Apply Configuration
-
-\`\`\`bash
-terraform apply
-\`\`\`
-
-This may take 20-30 minutes for the initial deployment.
-
-### 4. Verify Deployment
-
-\`\`\`bash
-# View all outputs
-terraform output
-
-${isGreenfield ? `# Check management groups
-az account management-group list --query "[?contains(name,'${config.company_abbreviation}')].{Name:name,DisplayName:displayName}"
-
-# Verify policy assignments
-az policy assignment list --query "[].{Name:name,Scope:scope}" -o table` : ''}
-\`\`\`
-
-## Post-Deployment Tasks
-
-${isGreenfield ? `
-1. **Configure Azure AD Groups**
-   - Create security groups for different roles
-   - Assign appropriate RBAC roles
-
-2. **Set Up Workload Landing Zones**
-   - Move or create subscriptions under Landing Zones management group
-   - Configure subscription-level policies
-
-3. **Enable Additional Security Features**
-   - Configure Defender for Cloud plans
-   - Set up Azure Sentinel connectors
-   - Review and tune policy assignments
-
-4. **Network Configuration**
-   - Configure VPN or ExpressRoute (if needed)
-   - Set up peering to spoke networks
-   - Configure firewall rules
-
-5. **Monitoring Setup**
-   - Create alert rules
-   - Configure dashboards
-   - Set up action groups
-` : `
-1. **Configure Access**
-   - Assign RBAC roles to users/groups
-   - Set up Key Vault access policies
-
-2. **Network Integration** (if applicable)
-   - Configure VNet integration
-   - Set up private endpoints
-
-3. **Data Ingestion**
-   - Configure data sources
-   - Set up pipelines
-`}
-
-## Architecture Diagrams
-
-${isGreenfield ? `
-### CAF Landing Zone Architecture
-\`\`\`
-Management Groups
-├── ${config.company_abbreviation}-${config.environment} (Root)
-    ├── Platform
-    │   ├── Management (Logging, Monitoring)
-    │   ├── Connectivity (Hub Network)
-    │   └── Identity
-    ├── Landing Zones
-    │   ├── Corp
-    │   ├── Online
-    │   └── SAP
-    ├── Sandboxes
-    └── Decommissioned
-\`\`\`
-
-### Network Topology
-\`\`\`
-Hub VNet (10.100.0.0/16)
-├── Azure Firewall
-├── VPN Gateway
-├── Private DNS Zones
-└── Spoke VNets (Peered)
-    ├── Corp Landing Zone
-    └── Online Landing Zone
-\`\`\`
-` : ''}
-
-## Cost Estimation
-
-${isGreenfield ? `
-**Monthly Estimate**: ~$500-1000 USD
-
-Major components:
-- Azure Firewall: ~$350/month
-- VPN Gateway: ~$140/month
-- Log Analytics: ~$50/month (depending on ingestion)
-- Defender for Cloud: Varies by plan
-- Storage and compute: As needed
-` : `
-Costs vary based on selected resources and usage.
-`}
-
-## Troubleshooting
-
-${isGreenfield ? `
-### Common Issues
-
-**Issue**: Policy assignment errors
-\`\`\`bash
-# Check policy compliance
-az policy state list --filter "complianceState eq 'NonCompliant'"
-\`\`\`
-
-**Issue**: Management group permissions
-\`\`\`bash
-# Verify your permissions
-az role assignment list --assignee $(az ad signed-in-user show --query objectId -o tsv) --scope /providers/Microsoft.Management/managementGroups/${config.company_abbreviation}-${config.environment}
-\`\`\`
-` : ''}
-
-### Getting Help
-
-- [Azure CAF Documentation](https://learn.microsoft.com/azure/cloud-adoption-framework/)
-- [Terraform AzureRM Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
-- [Azure Support](https://azure.microsoft.com/support/)
-
-## Learn More
-
-${isGreenfield ? `
-- **Cloud Adoption Framework**: https://learn.microsoft.com/azure/cloud-adoption-framework/
-- **Enterprise-Scale Landing Zones**: https://learn.microsoft.com/azure/cloud-adoption-framework/ready/enterprise-scale/
-- **Azure Landing Zone Terraform Module**: https://github.com/Azure/terraform-azurerm-caf-enterprise-scale
-- **Well-Architected Framework**: https://learn.microsoft.com/azure/well-architected/
-` : ''}
-
----
-
-**Generated by**: EpicData IaC Generator  
-**Generated on**: ${new Date().toISOString()}  
-**Deployment Type**: ${isGreenfield ? 'Greenfield (CAF Foundation)' : 'Brownfield (Data Platform)'}
-`;
-        }
-
-        function createFileTabs() {
-            const tabs = document.getElementById('fileTabs');
-            tabs.innerHTML = '';
-            
-            Object.keys(generatedFiles).forEach(file => {
-                const tab = document.createElement('button');
-                tab.className = 'file-tab';
-                tab.textContent = file;
-                tab.onclick = () => displayFile(file);
-                if (file === currentFile) tab.classList.add('active');
-                tabs.appendChild(tab);
-            });
-        }
-
-        function displayFile(file) {
-            currentFile = file;
-            document.getElementById('output').textContent = generatedFiles[file];
-            
-            document.querySelectorAll('.file-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.textContent === file);
-            });
-        }
-
-        function copyCode() {
-            navigator.clipboard.writeText(document.getElementById('output').textContent);
-            const btn = document.querySelector('.copy-btn');
-            const originalText = btn.textContent;
-            btn.textContent = '✓ Copied';
-            setTimeout(() => {
-                btn.textContent = originalText;
-            }, 2000);
-        }
-
-        async function downloadZip() {
-            const zip = new JSZip();
-            Object.keys(generatedFiles).forEach(file => {
-                zip.file(file, generatedFiles[file]);
-            });
-            
-            const content = await zip.generateAsync({type: 'blob'});
-            const url = URL.createObjectURL(content);
-            const a = document.createElement('a');
-            a.href = url;
-            const config = getConfig();
-            a.download = `${config.company_abbreviation}-${config.project_name}-${config.deployment_type}-terraform.zip`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-    </script>
+    <!-- External JavaScript Files -->
+    <script src="js/pricing.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

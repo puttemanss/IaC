@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"c:\\Users\\puttesa\\OneDrive - Cronos\\Bureaublad\\IaC\\IaC\\Website\\epicdata-iac-gen-caf.html\")",
+      "Bash(powershell -Command:*)",
+      "Bash(python:*)",
+      "Bash(dir /s /b *.html *.css *.js)",
+      "Bash(findstr:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
