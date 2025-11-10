@@ -87,3 +87,9 @@ variable "include_networking" {
   description = "Whether or not to include networking resources."
   type        = bool
 }
+
+variable "user_assigned_identity_ids" {
+  description = "List of User Assigned Identity IDs to assign to the SQL Server."
+  type        = list(string)
+  default     = []
+}

@@ -63,7 +63,7 @@ resource "azurerm_linux_function_app" "function" {
   public_network_access_enabled = !var.include_networking
 
   identity {
-    type         = "SystemAssigned, UserAssigned"
+    type         = "UserAssigned"
     identity_ids = var.user_assigned_identity_ids
   }
 

@@ -11,8 +11,12 @@ resource "azurerm_storage_account" "storage_account" {
 
   public_network_access_enabled = !var.include_networking
 
-  identity {
-    type = "SystemAssigned"
+  dynamic "identity" {
+    for_each = length(var.user_assigned_identity_ids) > 0 ? [1] : []
+    content {
+      type         = "UserAssigned"
+      identity_ids = var.user_assigned_identity_ids
+    }
   }
 
   tags = var.tags

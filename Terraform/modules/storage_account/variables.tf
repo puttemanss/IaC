@@ -55,3 +55,9 @@ variable "account_replication_type" {
   description = "The type of replication to use for the storage account."
   type        = string
 }
+
+variable "user_assigned_identity_ids" {
+  description = "List of User Assigned Identity IDs to assign to the Storage Account."
+  type        = list(string)
+  default     = []
+}

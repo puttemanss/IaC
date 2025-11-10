@@ -13,7 +13,7 @@ resource "azurerm_eventhub_namespace" "event_hub_namespace" {
   public_network_access_enabled = !var.include_networking
 
   identity {
-    type         = "SystemAssigned, UserAssigned"
+    type         = "UserAssigned"
     identity_ids = var.user_assigned_identity_ids
   }
   tags = var.tags

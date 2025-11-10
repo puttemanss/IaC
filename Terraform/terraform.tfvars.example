@@ -1,0 +1,97 @@
+# General Variables
+tenant_id            = "00000000-0000-0000-0000-000000000000"
+subscription_id      = "00000000-0000-0000-0000-000000000000"
+owner                = "Your Name"
+company_abbreviation = "abc"
+project_name         = "projectname"
+project_tag_name     = "Project Name"
+environment          = "dev"
+location             = "West Europe"
+devops_agent_ip      = "1.2.3.4/32"  # Required when include_networking=true and databricks_uc_metastore_id is set
+
+# Resource Toggles
+include_storage_account = true
+include_data_factory    = true
+include_databricks      = false
+include_eventhub        = false
+include_azure_function  = false
+include_sql_database    = false
+
+# Storage Account Configuration
+storage_account_account_replication_type = "LRS"
+
+# Databricks Configuration
+databricks_uc_metastore_id = ""  # Unity Catalog metastore ID
+databricks_account_id      = ""  # Required when databricks_uc_metastore_id is set
+first_environment          = true
+databricks_schema_names    = ["bronze", "silver", "gold"]
+
+# Event Hub Configuration
+event_hub_namespace_sku                      = "Standard"
+event_hub_namespace_auto_inflate             = true
+event_hub_namespace_capacity                 = 2
+event_hub_namespace_maximum_throughput_units = 4
+event_hub_partition_count                    = 1
+event_hub_message_retention                  = 1
+event_hub_enable_data_capture                = true
+event_hub_capture_interval                   = 300
+
+# Azure Function Configuration
+azure_function_kind     = "ASP"
+azure_function_sku_name = "B1"
+azure_function_runtime = {
+  language = "Python"
+  version  = "3.11"
+}
+
+# SQL Database Configuration
+sql_server_version             = "12.0"
+sql_server_admin_login_username = ""  # Required when include_sql_database=true
+sql_server_admin_object_id     = ""   # Required when include_sql_database=true
+sql_database_license_type      = "LicenseIncluded"
+sql_database_type              = "DTU"
+sql_database_dtu_sku           = "Basic"
+sql_database_vcpu_count        = 2
+sql_database_max_size_gb       = 2
+
+# Networking Configuration
+include_networking              = false
+networking_resource_group_name  = ""  # Required when include_networking=true
+vnet_name                       = ""  # Required when include_networking=true
+
+# VPN Connection Configuration
+include_vpn_connection                         = false
+vpn_application_id                             = ""  # Required when include_vpn_connection=true
+vpn_configuration_address_space_cidr_block     = "172.16.201.0/24"
+
+# VM Connection Configuration
+include_vm_connection = false
+vm_admin_username     = ""  # Required when include_vm_connection=true
+vm_admin_password     = ""  # Required when include_vm_connection=true
+vm_private_ip         = "10.0.5.100"
+vm_size               = "Standard_D2s_v3"
+vm_source_image_reference = {
+  publisher = "MicrosoftWindowsDesktop"
+  offer     = "windows-11"
+  sku       = "win11-22h2-ent"
+  version   = "latest"
+}
+
+# Subnet CIDR Blocks
+gateway_subnet_cidr_block            = "10.0.1.0/24"
+databricks_public_subnet_cidr_block  = "10.0.2.0/24"
+databricks_private_subnet_cidr_block = "10.0.3.0/24"
+azure_function_subnet_cidr_block     = "10.0.4.0/24"
+data_platform_subnet_cidr_block      = "10.0.5.0/24"
+
+# Private Endpoint IP Addresses
+pep_databricks_ui_api_ip                = "10.0.5.10"
+pep_databricks_browser_authentication_ips = ["10.0.5.11", "10.0.5.12", "10.0.5.13"]
+pep_datafactory_ip                      = "10.0.5.20"
+pep_datafactory_portal_ip               = "10.0.5.21"
+pep_storage_account_dfs_ip              = "10.0.5.30"
+pep_storage_account_blob_ip             = "10.0.5.31"
+pep_key_vault_vault_ip                  = "10.0.5.40"
+pep_event_hub_namespace_ip              = "10.0.5.50"
+pep_function_sites_ip                   = "10.0.5.60"
+pep_sqlserver_ip                        = "10.0.5.70"

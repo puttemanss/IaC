@@ -130,13 +130,20 @@ function updateResourceConfigVisibility() {
     const eventhubEnabled = document.getElementById('include_eventhub')?.checked;
     const sqlEnabled = document.getElementById('include_sql_database')?.checked;
     const functionEnabled = document.getElementById('include_azure_function')?.checked;
-    
+    const fabricEnabled = document.getElementById('include_fabric_capacity')?.checked;
+
     document.getElementById('eventhubConfig').style.display = eventhubEnabled ? 'block' : 'none';
     document.getElementById('sqlConfig').style.display = sqlEnabled ? 'block' : 'none';
     document.getElementById('functionConfig').style.display = functionEnabled ? 'block' : 'none';
-    
-    const anyConfigShown = eventhubEnabled || sqlEnabled || functionEnabled;
+    document.getElementById('fabricConfig').style.display = fabricEnabled ? 'block' : 'none';
+
+    const anyConfigShown = eventhubEnabled || sqlEnabled || functionEnabled || fabricEnabled;
     document.getElementById('noResourceConfig').style.display = anyConfigShown ? 'none' : 'block';
+}
+
+function toggleFabricRGInput() {
+    const useSeparateRG = document.getElementById('fabric_separate_rg').checked;
+    document.getElementById('fabricRGNameGroup').style.display = useSeparateRG ? 'block' : 'none';
 }
 
 function toggleCheckbox(id) {
@@ -379,7 +386,13 @@ function getConfig() {
         sql_database_sku: document.getElementById('sql_database_sku')?.value || 'Basic',
         // Azure Function
         function_plan_type: document.getElementById('function_plan_type')?.value || 'Consumption',
-        function_runtime: document.getElementById('function_runtime')?.value || 'python'
+        function_runtime: document.getElementById('function_runtime')?.value || 'python',
+        // Microsoft Fabric
+        include_fabric_capacity: document.getElementById('include_fabric_capacity')?.checked || false,
+        fabric_sku: document.getElementById('fabric_sku')?.value || 'F16',
+        fabric_admin_object_ids: document.getElementById('fabric_admin_object_ids')?.value || '',
+        fabric_separate_rg: document.getElementById('fabric_separate_rg')?.checked || false,
+        fabric_rg_name: document.getElementById('fabric_rg_name')?.value || ''
     };
 }
 
@@ -442,6 +455,10 @@ function calculateFunctionCost(planType) {
         return azurePricing.functions.premium.EP1;
     }
     return 0;
+}
+
+function calculateFabricCost(sku) {
+    return azurePricing.fabric[sku] || 0;
 }
 
 function calculateTotalCost(config) {
@@ -524,6 +541,16 @@ function calculateTotalCost(config) {
             total += functionCost;
         }
 
+        if (config.include_fabric_capacity) {
+            const fabricCost = calculateFabricCost(config.fabric_sku);
+            costs.push({
+                resource: 'Microsoft Fabric Capacity',
+                config: `${config.fabric_sku} SKU`,
+                cost: fabricCost
+            });
+            total += fabricCost;
+        }
+
         // Key Vault (always included in brownfield)
         const keyVaultCost = 10 * azurePricing.keyVault.secrets; // Assume 10 secrets
         costs.push({
@@ -578,25 +605,766 @@ function updateCostEstimation() {
     document.getElementById('costBreakdown').innerHTML = costHtml;
 }
 
+// ==============================================
+// MODULE GENERATORS - Terraform Best Practices
+// ==============================================
+
+function generateStorageAccountModule() {
+    const main = `resource "azurerm_storage_account" "this" {
+  name                     = var.name
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  account_tier             = var.account_tier
+  account_replication_type = var.replication_type
+  account_kind             = "StorageV2"
+  is_hns_enabled          = true
+
+  blob_properties {
+    versioning_enabled = true
+  }
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "name" {
+  description = "Name of the storage account"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "account_tier" {
+  description = "Storage account tier"
+  type        = string
+  default     = "Standard"
+}
+
+variable "replication_type" {
+  description = "Storage replication type"
+  type        = string
+  default     = "LRS"
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Storage account ID"
+  value       = azurerm_storage_account.this.id
+}
+
+output "name" {
+  description = "Storage account name"
+  value       = azurerm_storage_account.this.name
+}
+
+output "primary_blob_endpoint" {
+  description = "Primary blob endpoint"
+  value       = azurerm_storage_account.this.primary_blob_endpoint
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateDatabricksModule() {
+    const main = `resource "azurerm_databricks_workspace" "this" {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = var.sku
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "name" {
+  description = "Databricks workspace name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "sku" {
+  description = "Databricks SKU"
+  type        = string
+  default     = "premium"
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Databricks workspace ID"
+  value       = azurerm_databricks_workspace.this.id
+}
+
+output "workspace_url" {
+  description = "Databricks workspace URL"
+  value       = azurerm_databricks_workspace.this.workspace_url
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateDataFactoryModule() {
+    const main = `resource "azurerm_data_factory" "this" {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "name" {
+  description = "Data Factory name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Data Factory ID"
+  value       = azurerm_data_factory.this.id
+}
+
+output "name" {
+  description = "Data Factory name"
+  value       = azurerm_data_factory.this.name
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateEventHubModule() {
+    const main = `resource "azurerm_eventhub_namespace" "this" {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  sku                 = var.sku
+  capacity            = var.capacity
+
+  tags = var.tags
+}
+
+resource "azurerm_eventhub" "this" {
+  name                = "\${var.name}-hub"
+  namespace_name      = azurerm_eventhub_namespace.this.name
+  resource_group_name = var.resource_group_name
+  partition_count     = var.partition_count
+  message_retention   = var.message_retention
+}`;
+
+    const variables = `variable "name" {
+  description = "Event Hub namespace name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "sku" {
+  description = "Event Hub SKU"
+  type        = string
+  default     = "Standard"
+}
+
+variable "capacity" {
+  description = "Throughput units"
+  type        = number
+  default     = 1
+}
+
+variable "partition_count" {
+  description = "Number of partitions"
+  type        = number
+  default     = 4
+}
+
+variable "message_retention" {
+  description = "Message retention in days"
+  type        = number
+  default     = 1
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Event Hub namespace ID"
+  value       = azurerm_eventhub_namespace.this.id
+}
+
+output "namespace_name" {
+  description = "Event Hub namespace name"
+  value       = azurerm_eventhub_namespace.this.name
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateSQLDatabaseModule() {
+    const main = `resource "azurerm_mssql_server" "this" {
+  name                         = var.server_name
+  resource_group_name          = var.resource_group_name
+  location                     = var.location
+  version                      = "12.0"
+  administrator_login          = var.admin_login
+  administrator_login_password = var.admin_password
+
+  tags = var.tags
+}
+
+resource "azurerm_mssql_database" "this" {
+  name      = var.database_name
+  server_id = azurerm_mssql_server.this.id
+  sku_name  = var.sku_name
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "server_name" {
+  description = "SQL Server name"
+  type        = string
+}
+
+variable "database_name" {
+  description = "SQL Database name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "admin_login" {
+  description = "Administrator login"
+  type        = string
+}
+
+variable "admin_password" {
+  description = "Administrator password"
+  type        = string
+  sensitive   = true
+}
+
+variable "sku_name" {
+  description = "Database SKU"
+  type        = string
+  default     = "Basic"
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "server_id" {
+  description = "SQL Server ID"
+  value       = azurerm_mssql_server.this.id
+}
+
+output "database_id" {
+  description = "SQL Database ID"
+  value       = azurerm_mssql_database.this.id
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateKeyVaultModule() {
+    const main = `data "azurerm_client_config" "current" {}
+
+resource "azurerm_key_vault" "this" {
+  name                = var.name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  sku_name            = var.sku_name
+
+  soft_delete_retention_days = 90
+  purge_protection_enabled   = true
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "name" {
+  description = "Key Vault name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "sku_name" {
+  description = "Key Vault SKU"
+  type        = string
+  default     = "standard"
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Key Vault ID"
+  value       = azurerm_key_vault.this.id
+}
+
+output "vault_uri" {
+  description = "Key Vault URI"
+  value       = azurerm_key_vault.this.vault_uri
+}`;
+
+    return { main, variables, outputs };
+}
+
+function generateFabricCapacityModule() {
+    const main = `resource "azurerm_resource_group" "fabric" {
+  count    = var.use_separate_rg ? 1 : 0
+  name     = var.fabric_resource_group_name
+  location = var.location
+  tags     = var.tags
+}
+
+resource "azurerm_fabric_capacity" "this" {
+  name                = var.name
+  resource_group_name = var.use_separate_rg ? azurerm_resource_group.fabric[0].name : var.resource_group_name
+  location            = var.use_separate_rg ? azurerm_resource_group.fabric[0].location : var.location
+
+  sku {
+    name = var.sku
+    tier = "Fabric"
+  }
+
+  administration {
+    members = var.admin_members
+  }
+
+  tags = var.tags
+}`;
+
+    const variables = `variable "name" {
+  description = "Fabric Capacity name"
+  type        = string
+}
+
+variable "resource_group_name" {
+  description = "Resource group name"
+  type        = string
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+}
+
+variable "sku" {
+  description = "Fabric Capacity SKU (F2, F4, F8, F16, F32, F64, F128, F256, F512)"
+  type        = string
+  default     = "F16"
+
+  validation {
+    condition     = contains(["F2", "F4", "F8", "F16", "F32", "F64", "F128", "F256", "F512"], var.sku)
+    error_message = "SKU must be one of: F2, F4, F8, F16, F32, F64, F128, F256, F512"
+  }
+}
+
+variable "admin_members" {
+  description = "List of Azure AD Object IDs for Fabric capacity administrators"
+  type        = list(string)
+}
+
+variable "use_separate_rg" {
+  description = "Create a separate resource group for Fabric Capacity"
+  type        = bool
+  default     = false
+}
+
+variable "fabric_resource_group_name" {
+  description = "Name of the separate resource group for Fabric (if use_separate_rg is true)"
+  type        = string
+  default     = ""
+}
+
+variable "tags" {
+  description = "Tags to apply to resources"
+  type        = map(string)
+  default     = {}
+}`;
+
+    const outputs = `output "id" {
+  description = "Fabric Capacity ID"
+  value       = azurerm_fabric_capacity.this.id
+}
+
+output "name" {
+  description = "Fabric Capacity name"
+  value       = azurerm_fabric_capacity.this.name
+}
+
+output "resource_group_name" {
+  description = "Resource group name"
+  value       = azurerm_fabric_capacity.this.resource_group_name
+}`;
+
+    return { main, variables, outputs };
+}
+
 function generateTerraform() {
     const config = getConfig();
     generatedFiles = {};
-    
+
     if (config.deployment_type === 'greenfield') {
         generatedFiles['main.tf'] = generateCAFMain(config);
         generatedFiles['variables.tf'] = generateCAFVariables(config);
         generatedFiles['terraform.tfvars'] = generateCAFTfvars(config);
     } else {
-        generatedFiles['main.tf'] = generateBrownfieldMain(config);
+        // Generate modular main.tf that calls modules
+        generatedFiles['main.tf'] = generateModularMain(config);
         generatedFiles['variables.tf'] = generateBrownfieldVariables(config);
         generatedFiles['terraform.tfvars'] = generateBrownfieldTfvars(config);
+
+        // Generate module files for selected services
+        if (config.include_storage_account) {
+            const storage = generateStorageAccountModule();
+            generatedFiles['modules/storage-account/main.tf'] = storage.main;
+            generatedFiles['modules/storage-account/variables.tf'] = storage.variables;
+            generatedFiles['modules/storage-account/outputs.tf'] = storage.outputs;
+        }
+
+        if (config.include_databricks) {
+            const databricks = generateDatabricksModule();
+            generatedFiles['modules/databricks/main.tf'] = databricks.main;
+            generatedFiles['modules/databricks/variables.tf'] = databricks.variables;
+            generatedFiles['modules/databricks/outputs.tf'] = databricks.outputs;
+        }
+
+        if (config.include_data_factory) {
+            const adf = generateDataFactoryModule();
+            generatedFiles['modules/data-factory/main.tf'] = adf.main;
+            generatedFiles['modules/data-factory/variables.tf'] = adf.variables;
+            generatedFiles['modules/data-factory/outputs.tf'] = adf.outputs;
+        }
+
+        if (config.include_eventhub) {
+            const eventhub = generateEventHubModule();
+            generatedFiles['modules/event-hub/main.tf'] = eventhub.main;
+            generatedFiles['modules/event-hub/variables.tf'] = eventhub.variables;
+            generatedFiles['modules/event-hub/outputs.tf'] = eventhub.outputs;
+        }
+
+        if (config.include_sql_database) {
+            const sql = generateSQLDatabaseModule();
+            generatedFiles['modules/sql-database/main.tf'] = sql.main;
+            generatedFiles['modules/sql-database/variables.tf'] = sql.variables;
+            generatedFiles['modules/sql-database/outputs.tf'] = sql.outputs;
+        }
+
+        if (config.include_fabric_capacity) {
+            const fabric = generateFabricCapacityModule();
+            generatedFiles['modules/fabric-capacity/main.tf'] = fabric.main;
+            generatedFiles['modules/fabric-capacity/variables.tf'] = fabric.variables;
+            generatedFiles['modules/fabric-capacity/outputs.tf'] = fabric.outputs;
+        }
+
+        // Always include Key Vault module
+        const keyvault = generateKeyVaultModule();
+        generatedFiles['modules/key-vault/main.tf'] = keyvault.main;
+        generatedFiles['modules/key-vault/variables.tf'] = keyvault.variables;
+        generatedFiles['modules/key-vault/outputs.tf'] = keyvault.outputs;
     }
-    
+
     generatedFiles['providers.tf'] = generateProviders(config);
-    generatedFiles['README.md'] = generateReadme(config);
+    generatedFiles['README.md'] = generateModularReadme(config);
 
     createFileTabs();
     displayFile('main.tf');
+}
+
+function generateModularMain(config) {
+    let main = `# Azure Data Platform - Modular Terraform Configuration
+# Generated by EpicData IaC Generator
+# Uses reusable modules for better maintainability
+
+# Resource Group
+resource "azurerm_resource_group" "main" {
+  name     = "rg-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  location = var.location
+
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "Terraform"
+  }
+}
+
+`;
+
+    // Storage Account Module
+    if (config.include_storage_account) {
+        main += `# Storage Account Module
+module "storage_account" {
+  source = "./modules/storage-account"
+
+  name                = "st\${var.company_abbreviation}\${var.project_name}\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  account_tier        = "Standard"
+  replication_type    = "LRS"
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // Databricks Module
+    if (config.include_databricks) {
+        main += `# Databricks Module
+module "databricks" {
+  source = "./modules/databricks"
+
+  name                = "dbw-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku                 = "premium"
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // Data Factory Module
+    if (config.include_data_factory) {
+        main += `# Data Factory Module
+module "data_factory" {
+  source = "./modules/data-factory"
+
+  name                = "adf-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // Event Hub Module
+    if (config.include_eventhub) {
+        main += `# Event Hub Module
+module "event_hub" {
+  source = "./modules/event-hub"
+
+  name                = "evhns-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku                 = "${config.eventhub_sku}"
+  partition_count     = ${config.eventhub_partition_count}
+  message_retention   = ${config.eventhub_message_retention}
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // SQL Database Module
+    if (config.include_sql_database) {
+        main += `# SQL Database Module
+module "sql_database" {
+  source = "./modules/sql-database"
+
+  server_name         = "sql-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  database_name       = "sqldb-\${var.project_name}-\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  admin_login         = var.sql_admin_login
+  admin_password      = var.sql_admin_password
+  sku_name            = "${config.sql_database_sku}"
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // Fabric Capacity Module
+    if (config.include_fabric_capacity) {
+        // Parse multiple admin IDs (comma-separated)
+        const adminIds = config.fabric_admin_object_ids
+            ? config.fabric_admin_object_ids.split(',').map(id => id.trim()).filter(id => id.length > 0)
+            : [];
+
+        const adminMembersArray = adminIds.length > 0
+            ? `[${adminIds.map(id => `"${id}"`).join(', ')}]`
+            : '[]';
+
+        // Use custom RG name if provided, otherwise generate default
+        const fabricRGName = config.fabric_rg_name && config.fabric_rg_name.trim()
+            ? config.fabric_rg_name.trim()
+            : `rg-\${var.company_abbreviation}-fabric-\${var.environment}`;
+
+        main += `# Microsoft Fabric Capacity Module
+module "fabric_capacity" {
+  source = "./modules/fabric-capacity"
+
+  name                      = "fc-\${var.company_abbreviation}-\${var.project_name}-\${var.environment}"
+  resource_group_name       = azurerm_resource_group.main.name
+  location                  = azurerm_resource_group.main.location
+  sku                       = "${config.fabric_sku}"
+  admin_members             = ${adminMembersArray}
+  use_separate_rg           = ${config.fabric_separate_rg}
+  fabric_resource_group_name = "${fabricRGName}"
+
+  tags = azurerm_resource_group.main.tags
+}
+
+`;
+    }
+
+    // Key Vault Module (always included)
+    main += `# Key Vault Module
+module "key_vault" {
+  source = "./modules/key-vault"
+
+  name                = "kv-\${var.company_abbreviation}-\${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  sku_name            = "standard"
+
+  tags = azurerm_resource_group.main.tags
+}
+`;
+
+    return main;
+}
+
+function generateModularReadme(config) {
+    return `# Azure Data Platform - Terraform Configuration
+
+## Overview
+This Terraform configuration deploys an Azure data platform using reusable modules.
+
+## Structure
+\`\`\`
+.
+├── main.tf                 # Root module that calls child modules
+├── variables.tf            # Input variables
+├── terraform.tfvars        # Variable values
+├── providers.tf            # Provider configuration
+└── modules/                # Reusable modules
+${config.include_storage_account ? '    ├── storage-account/   # Storage Account module\n' : ''}${config.include_databricks ? '    ├── databricks/        # Databricks module\n' : ''}${config.include_data_factory ? '    ├── data-factory/      # Data Factory module\n' : ''}${config.include_eventhub ? '    ├── event-hub/         # Event Hub module\n' : ''}${config.include_sql_database ? '    ├── sql-database/      # SQL Database module\n' : ''}${config.include_fabric_capacity ? '    ├── fabric-capacity/   # Microsoft Fabric Capacity module\n' : ''}    └── key-vault/         # Key Vault module
+\`\`\`
+
+## Modules
+Each module contains:
+- \`main.tf\` - Resource definitions
+- \`variables.tf\` - Input variables
+- \`outputs.tf\` - Output values
+
+## Usage
+
+### Initialize Terraform
+\`\`\`bash
+terraform init
+\`\`\`
+
+### Plan deployment
+\`\`\`bash
+terraform plan
+\`\`\`
+
+### Apply configuration
+\`\`\`bash
+terraform apply
+\`\`\`
+
+## Module Reusability
+The modules in this configuration can be reused across different environments and projects.
+Simply reference them from other Terraform configurations:
+
+\`\`\`hcl
+module "storage" {
+  source = "git::https://your-repo.git//modules/storage-account?ref=v1.0.0"
+
+  name                = "mystorageaccount"
+  resource_group_name = "my-rg"
+  location            = "westeurope"
+}
+\`\`\`
+
+## Configuration
+Edit \`terraform.tfvars\` to customize the deployment.
+
+Generated by EpicData IaC Generator
+`;
 }
 
 function generateCAFMain(config) {
@@ -1837,8 +2605,27 @@ ${isGreenfield ? `
 function createFileTabs() {
     const tabs = document.getElementById('fileTabs');
     tabs.innerHTML = '';
-    
+
+    // Separate root files from module files
+    const rootFiles = [];
+    const moduleFiles = {};
+
     Object.keys(generatedFiles).forEach(file => {
+        if (file.startsWith('modules/')) {
+            // Extract module name from path like "modules/storage-account/main.tf"
+            const parts = file.split('/');
+            const moduleName = parts[1];
+            if (!moduleFiles[moduleName]) {
+                moduleFiles[moduleName] = [];
+            }
+            moduleFiles[moduleName].push(file);
+        } else {
+            rootFiles.push(file);
+        }
+    });
+
+    // Create tabs for root files
+    rootFiles.forEach(file => {
         const tab = document.createElement('button');
         tab.className = 'file-tab';
         tab.textContent = file;
@@ -1846,14 +2633,100 @@ function createFileTabs() {
         if (file === currentFile) tab.classList.add('active');
         tabs.appendChild(tab);
     });
+
+    // Create dropdown/group for each module
+    Object.keys(moduleFiles).sort().forEach(moduleName => {
+        const moduleGroup = document.createElement('div');
+        moduleGroup.style.display = 'inline-block';
+        moduleGroup.style.position = 'relative';
+
+        const moduleButton = document.createElement('button');
+        moduleButton.className = 'file-tab module-tab';
+        moduleButton.textContent = `📦 ${moduleName}`;
+        moduleButton.style.fontWeight = '600';
+
+        const dropdown = document.createElement('div');
+        dropdown.className = 'module-dropdown';
+        dropdown.style.display = 'none';
+        dropdown.style.position = 'absolute';
+        dropdown.style.background = 'var(--bg-primary)';
+        dropdown.style.border = '1px solid var(--border-color)';
+        dropdown.style.borderRadius = '6px';
+        dropdown.style.marginTop = '4px';
+        dropdown.style.minWidth = '200px';
+        dropdown.style.boxShadow = 'var(--shadow-lg)';
+        dropdown.style.zIndex = '1000';
+
+        moduleFiles[moduleName].forEach(file => {
+            const fileName = file.split('/').pop(); // Get just the filename
+            const fileButton = document.createElement('button');
+            fileButton.className = 'file-tab-dropdown-item';
+            fileButton.textContent = fileName;
+            fileButton.style.display = 'block';
+            fileButton.style.width = '100%';
+            fileButton.style.padding = '8px 12px';
+            fileButton.style.border = 'none';
+            fileButton.style.background = 'transparent';
+            fileButton.style.textAlign = 'left';
+            fileButton.style.cursor = 'pointer';
+            fileButton.style.fontSize = '12px';
+            fileButton.style.color = 'var(--text-primary)';
+            fileButton.style.fontWeight = '500';
+
+            fileButton.onmouseover = () => {
+                fileButton.style.background = 'var(--bg-tertiary)';
+                fileButton.style.color = 'var(--accent-primary)';
+            };
+            fileButton.onmouseout = () => {
+                fileButton.style.background = 'transparent';
+                fileButton.style.color = 'var(--text-primary)';
+            };
+
+            fileButton.onclick = () => {
+                displayFile(file);
+                dropdown.style.display = 'none';
+            };
+
+            dropdown.appendChild(fileButton);
+        });
+
+        moduleButton.onclick = () => {
+            // Close all other dropdowns
+            document.querySelectorAll('.module-dropdown').forEach(d => {
+                if (d !== dropdown) d.style.display = 'none';
+            });
+            // Toggle this dropdown
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        };
+
+        moduleGroup.appendChild(moduleButton);
+        moduleGroup.appendChild(dropdown);
+        tabs.appendChild(moduleGroup);
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.module-tab')) {
+            document.querySelectorAll('.module-dropdown').forEach(d => {
+                d.style.display = 'none';
+            });
+        }
+    });
 }
 
 function displayFile(file) {
     currentFile = file;
     document.getElementById('output').textContent = generatedFiles[file];
-    
-    document.querySelectorAll('.file-tab').forEach(tab => {
+
+    // Update active state for root file tabs
+    document.querySelectorAll('.file-tab:not(.module-tab)').forEach(tab => {
         tab.classList.toggle('active', tab.textContent === file);
+    });
+
+    // Highlight module tabs if a module file is selected
+    document.querySelectorAll('.module-tab').forEach(tab => {
+        const moduleName = tab.textContent.replace('📦 ', '');
+        tab.classList.toggle('active', file.includes(`modules/${moduleName}/`));
     });
 }
 

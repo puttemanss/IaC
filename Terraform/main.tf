@@ -157,6 +157,10 @@ module "storage_account" {
   environment              = var.environment
   account_replication_type = var.storage_account_account_replication_type
 
+  user_assigned_identity_ids = compact([
+    local.uai_dls_data_contributor_id
+  ])
+
   include_networking             = var.include_networking
   networking_resource_group_name = var.networking_resource_group_name
   vnet_id                        = local.vnet_id
@@ -210,7 +214,6 @@ module "data_factory" {
 
 locals {
   data_factory_id = var.include_data_factory ? module.data_factory[0].id : ""
-  data_factory_principal_id = var.include_data_factory ? module.data_factory[0].principal_id : ""
 }
 
 ###########################################
@@ -402,6 +405,10 @@ module "sql_database" {
   database_sku_name     = local.sql_database_sku_name
   database_max_size_gb  = var.sql_database_max_size_gb
 
+  user_assigned_identity_ids = compact([
+    local.uai_sql_server_contributor_id
+  ])
+
   include_networking             = var.include_networking
   environment                    = var.environment
   networking_resource_group_name = var.networking_resource_group_name
@@ -433,12 +440,6 @@ module "role_assignment" {
       principal_id         = local.uai_key_vault_secrets_officer_principal_id
       role_definition_name = "Key Vault Secrets Officer"
       scope                = local.key_vault_id
-    },
-    {
-      create = var.include_data_factory
-      principal_id = local.data_factory_principal_id
-      role_definition_name = "Key Vault Secrets User"
-      scope = local.key_vault_id
     },
     {
       create               = var.include_data_factory

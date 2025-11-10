@@ -190,6 +190,11 @@
                             <input type="checkbox" id="include_azure_function">
                             <label for="include_azure_function">Azure Functions</label>
                         </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="include_fabric_capacity">
+                            <label for="include_fabric_capacity">Microsoft Fabric Capacity</label>
+                        </div>
                     </div>
 
                     <div id="greenfieldNote" style="display: none;">
@@ -420,6 +425,45 @@
                                 <option value="node">Node.js</option>
                                 <option value="dotnet">. NET</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div id="fabricConfig" style="display: none; margin-bottom: 20px;">
+                        <div class="info-box info">
+                            <div class="info-box-title">Microsoft Fabric Capacity Configuration</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Fabric Capacity SKU</label>
+                            <select id="fabric_sku">
+                                <option value="F2">F2 (2 Capacity Units)</option>
+                                <option value="F4">F4 (4 Capacity Units)</option>
+                                <option value="F8">F8 (8 Capacity Units)</option>
+                                <option value="F16" selected>F16 (16 Capacity Units)</option>
+                                <option value="F32">F32 (32 Capacity Units)</option>
+                                <option value="F64">F64 (64 Capacity Units)</option>
+                                <option value="F128">F128 (128 Capacity Units)</option>
+                                <option value="F256">F256 (256 Capacity Units)</option>
+                                <option value="F512">F512 (512 Capacity Units)</option>
+                            </select>
+                            <div class="help-text">Select the capacity size based on your workload requirements</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Capacity Admin Object IDs (Azure AD)</label>
+                            <input type="text" id="fabric_admin_object_ids" placeholder="id1, id2, id3">
+                            <div class="help-text">Azure AD Object IDs of Fabric capacity administrators (comma-separated for multiple admins)</div>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="fabric_separate_rg" onclick="toggleFabricRGInput()">
+                            <label for="fabric_separate_rg">Use separate resource group for Fabric Capacity</label>
+                        </div>
+
+                        <div class="form-group" id="fabricRGNameGroup" style="display: none; margin-top: 16px;">
+                            <label>Fabric Resource Group Name</label>
+                            <input type="text" id="fabric_rg_name" placeholder="rg-fabric-prd">
+                            <div class="help-text">Name for the separate Fabric Capacity resource group</div>
                         </div>
                     </div>
 

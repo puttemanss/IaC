@@ -6,7 +6,7 @@ resource "azurerm_data_factory" "data_factory" {
   public_network_enabled          = !var.include_networking
 
   identity {
-    type         = "SystemAssigned, UserAssigned"
+    type         = "UserAssigned"
     identity_ids = var.user_assigned_identity_ids
   }
 

@@ -71,6 +71,17 @@ const azurePricing = {
     azureFirewall: {
         deployment: 1.075, // per hour (~774 EUR/month)
         dataProcessed: 0.0134 // per GB
+    },
+    fabric: {
+        F2: 222.00, // per month
+        F4: 444.00, // per month
+        F8: 888.00, // per month
+        F16: 1776.00, // per month
+        F32: 3552.00, // per month
+        F64: 7104.00, // per month
+        F128: 14208.00, // per month
+        F256: 28416.00, // per month
+        F512: 56832.00 // per month
     }
 };
 
